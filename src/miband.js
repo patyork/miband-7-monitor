@@ -13,10 +13,10 @@ const concatBuffers = (buffer1, buffer2) => {
   return out.buffer;
 };
 
-export class MiBand5 {
+export class MiBand6 {
   /**
    * @param {String} authKey
-   *   Hex representation of the auth key (https://github.com/Freeyourgadget/Gadgetbridge/wiki/Huami-Server-Pairing)
+   *   Hex representation of the auth key (https://codeberg.org/Freeyourgadget/Gadgetbridge/wiki/Huami-Server-Pairing)
    *   Example: '94359d5b8b092e1286a43cfb62ee7923'
    */
   constructor(authKey) {
@@ -127,4 +127,4 @@ export class MiBand5 {
   }
 }
 
-window.MiBand5 = MiBand5;
+window.MiBand6 = MiBand6;

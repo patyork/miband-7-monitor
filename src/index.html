@@ -6,7 +6,7 @@
       content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
     />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>MiBand 5 Heartrate</title>
+    <title>MiBand 6 Heartrate</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -18,7 +18,7 @@
             >Auth key
             <a
               target="_blank"
-              href="https://github.com/Freeyourgadget/Gadgetbridge/wiki/Huami-Server-Pairing"
+              href="https://codeberg.org/Freeyourgadget/Gadgetbridge/wiki/Huami-Server-Pairing"
               >what is this?</a
             >
           </label>
@@ -68,7 +68,7 @@
           chart.update(e.detail);
         });
         try {
-          window.miband = new MiBand5(authKey);
+          window.miband = new MiBand6(authKey);
           await window.miband.init();
         } catch (e) {
           alert(e.message);
