@@ -72,24 +72,24 @@ export class MiBand6 {
       const cmd = buf2hex(value.slice(0, 3));
       if (cmd === "100101") {
         console.log("Set new key OK");
-      } else if (cmd === "100201") {
+      } else if (cmd === "108201") {
         const number = value.slice(3);
         console.log("Received authentication challenge: ", buf2hex(value.slice(3)));
         const key = aesjs.utils.hex.toBytes(this.authKey);
         const aesCbc = new aesjs.ModeOfOperation.cbc(key);
         const out = aesCbc.encrypt(new Uint8Array(number));
-        const cmd = concatBuffers(new Uint8Array([3, 0]), out);
+        const cmd = concatBuffers(new Uint8Array([0x83, 0]), out);
         console.log("Sending authentication response");
         await this.chars.auth.writeValue(cmd);
-      } else if (cmd === "100301") {
+      } else if (cmd === "108301") {
         await this.onAuthenticated();
-      } else if (cmd === "100308") {
+      } else if (cmd === "108308") {
         console.log("Received authentication failure");
       } else {
         throw new Error(`Unknown callback, cmd='${cmd}'`);
       }
     });
-    await this.chars.auth.writeValue(Uint8Array.from([2, 0]));
+    await this.chars.auth.writeValue(Uint8Array.from([0x82, 0]));
   }
 
   async onAuthenticated() {
