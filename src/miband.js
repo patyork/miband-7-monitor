@@ -68,6 +68,7 @@ export class MiBand6 {
   async authenticate() {
     await this.startNotifications(this.chars.auth, async (e) => {
       const value = e.target.value.buffer;
+      console.log(value);
       const cmd = buf2hex(value.slice(0, 3));
       if (cmd === "100101") {
         console.log("Set new key OK");

@@ -10,7 +10,7 @@
     "lint": "prettier --write src/"
   },
   "dependencies": {
-    "esbuild": "^0.8.43"
+    "esbuild": "^0.8.57"
   },
   "devDependencies": {
     "apexcharts": "^3.24.0",
