@@ -39,8 +39,10 @@ export const CHAR_UUIDS = {
   user_settings: '00000008-0000-3512-2118-0009af100700',
   music_notification: '00000010-0000-3512-2118-0009af100700',
   deviceevent: '00000010-0000-3512-2118-0009af100700',
+  
   chunked_transfer: '00000020-0000-3512-2118-0009af100700',
-
+  chunked_transfer_2021_write: '00000016-0000-3512-2118-0009af100700',
+  chunked_transfer_2021_read: '00000017-0000-3512-2118-0009af100700',
 };
 
 export const NOTIFICATION_DESCRIPTOR = 0x2902;

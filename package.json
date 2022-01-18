@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "scripts": {
     "watch": "esbuild --bundle src/index.js --outfile=src/bundle.js",
-    "build": "rm -r dist/*; esbuild --bundle src/index.js --outfile=dist/bundle.js && cp src/index.html src/style.css src/aes.js dist/",
-    "serve": "npm run watch & cd src; npx http-server",
-    "serve:dist": "npm run build && cd dist; npx http-server",
+    "build": "rm -r dist/*; esbuild --bundle src/index.js --outfile=dist/bundle.js && cp src/index.html src/style.css src/aes.js src/ecdh.js src/ecdh.wasm dist/",
+    "serve": "npm run watch & cd src; npx http-server -p 8081",
+    "serve:dist": "npm run build && cd dist; npx http-server -p 8081",
     "lint": "prettier --write src/"
   },
   "dependencies": {
@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "apexcharts": "^3.24.0",
+    "eslint": "^8.7.0",
     "prettier": "^2.2.1"
   }
 }

@@ -2,9 +2,12 @@
 
 # Mi Band 6 Heart Rate Monitor
 
-Display your Mi Band's heart rate in the browser.
+Display your Mi Band 6's heart rate in the browser. 
 
 ![Heart rate webapp](img/screenshot.png)
+
+Changelog:
+- **Fixed authentication so it works with modern firmwares (Thanks Gadgetbridge for the inspiration, tiny-ecdh-c for elliptic curve Diffie-Hellman implementation)** 
 
 ## Requirements
 
@@ -28,3 +31,7 @@ For troubleshooting, check the browser's developer console
 - [satcar77/miband4](https://github.com/satcar77/miband4)
 - [vshymanskyy/miband-js](https://github.com/vshymanskyy/miband-js)
 - [VladKolerts/miband4](https://github.com/VladKolerts/miband4)
+
+## Libraries
+
+- [tiny-ECDH-wasm (used for modern auth)](https://github.com/gzalo/tiny-ECDH-wasm)
