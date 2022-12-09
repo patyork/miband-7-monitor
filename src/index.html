@@ -6,7 +6,7 @@
       content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
     />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>MiBand 6 Heartrate</title>
+    <title>Band 7 Monitor</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -36,7 +36,7 @@
       </div>
       <div class="hr d-none">
         <h1 id="heartrate">
-          <span id="hr">-</span><span class="unit">BPM</span>
+          <span id="hr">-</span><span class="unit"></span>
         </h1>
       </div>
     </div>
@@ -68,7 +68,7 @@
           chart.update(e.detail);
         });
         try {
-          window.miband = new MiBand6(authKey);
+          window.miband = new MiBand7(authKey);
           await window.miband.init();
         } catch (e) {
           alert(e.message);

@@ -1,16 +1,17 @@
 {
-  "name": "miband5-web",
-  "author": "Jaap Heijligers",
+  "name": "band7-web",
+  "author": "Pat York",
   "version": "1.0.0",
   "scripts": {
-    "watch": "esbuild --bundle src/index.js --outfile=src/bundle.js",
-    "build": "rm -r dist/*; esbuild --bundle src/index.js --outfile=dist/bundle.js && cp src/index.html src/style.css src/aes.js src/ecdh.js src/ecdh.wasm dist/",
-    "serve": "npm run watch & cd src; npx http-server -p 8081",
-    "serve:dist": "npm run build && cd dist; npx http-server -p 8081",
+    "clean": "shx rm dist/*",
+    "build": "esbuild --bundle src/index.js --outfile=dist/bundle.js && shx cp src/index.html src/style.css src/aes.js src/ecdh.js src/ecdh.wasm dist/",
+    "serve": "npm run build && npx http-server dist/ -p 8081",
     "lint": "prettier --write src/"
   },
   "dependencies": {
-    "esbuild": "^0.8.57"
+    "esbuild": "^0.8.57",
+    "http-server": "^14.1.1",
+    "shx": "^0.3.4"
   },
   "devDependencies": {
     "apexcharts": "^3.24.0",

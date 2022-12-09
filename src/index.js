@@ -1,2 +1,2 @@
-import { MiBand6 } from "./miband";
+import { Band7 } from "./band7";
 import { Chart } from "./chart";

@@ -1,0 +1,541 @@
+import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES } from "./constants.js";
+import { toHexString, bufferToUint8Array, invertDictionary } from "./tools.js";
+
+export class Band7 {
+    /**
+     * @param {String} authKey
+     *   Hex representation of the auth key (https://codeberg.org/Freeyourgadget/Gadgetbridge/wiki/Huami-Server-Pairing)
+     *   Example: '94359d5b8b092e1286a43cfb62ee7923'
+     */
+    constructor(authKey) {
+        if (!authKey.match(/^[a-zA-Z0-9]{32}$/)) {
+            throw new Error(
+                "Invalid auth key, must be 32 hex characters such as '94359d5b8b092e1286a43cfb62ee7923'"
+            );
+        }
+        this.authKey = authKey;
+        this.services = {};
+        this.chars = {};
+        this.handle = 0;
+
+        this.reassembleBuffer = new Uint8Array(512);
+        this.lastSequenceNumber = 0;
+        this.reassembleBuffer_pointer = 0;
+        this.reassembleBuffer_expectedBytes = 0;
+
+        this.prv_buf = null;
+        this.pub_buf = null;
+        this.sec_buf = null;
+        this.prv = null;
+        this.pub = null;
+        this.sec = null;
+
+        
+        this.inverted_services = invertDictionary(SERVICE_UUIDS);
+        this.inverted_chars = invertDictionary(CHAR_UUIDS);
+        this.last_generic_event = null;
+    }
+
+    getNextHandle() {
+        //console.log("handle: " + this.handle)
+        return this.handle++;
+    }
+
+    async init() {
+
+        const device = await navigator.bluetooth.requestDevice({
+
+            filters: [
+                {
+                    services: [ADVERTISEMENT_SERVICE],
+                },
+            ],
+            //optionalServices: service_uuids,
+        });
+        window.dispatchEvent(new CustomEvent("connected"));
+        await device.gatt.disconnect();
+        const server = await device.gatt.connect();
+        console.log("Connected through gatt");
+        this.server = server;
+        this.device = device;
+
+
+        console.log("Initializing Services and Characteristics");
+        var service_keys = Object.keys(SERVICE_UUIDS);
+        var service_uuids = Object.values(SERVICE_UUIDS);
+        var char_keys = Object.keys(CHAR_UUIDS);
+        var char_uuids = Object.values(CHAR_UUIDS);
+        
+        // Programatically discover services and characteristics
+        await Promise.all(service_keys.map(async (key) => {
+            try {
+                var s = await this.server.getPrimaryService(SERVICE_UUIDS[key]);
+
+                try {
+                    const cs = await s.getCharacteristics();
+                    s.characteristics = cs;
+
+                    cs.map(async (char) => {
+                        var name = this.inverted_chars[char.uuid]
+                        this.chars[name] = char
+                        //char.server.name = inverted_services[char.service.uuid]
+
+                        /*
+                        // Read if able
+                        try {
+                            const c = await char.readValue();
+                            let ui8 = new Uint8Array(c.buffer, c.byteOffset, c.byteLength / Uint8Array.BYTES_PER_ELEMENT);
+                            //console.log(ui8);
+                        }
+                        catch (ex) { }
+                        */
+                    });
+                }
+                catch (error) {
+                    console.log("Service " + key + " has no characteristics")
+                }
+                this.services[key] = s;
+                return s
+            }
+            catch (error) {
+                console.log("Debug : No Service " + key + " " + SERVICE_UUIDS[key]);
+            }
+        }));
+
+        /*
+        this.services.MIBAND_SERVICE = await server.getPrimaryService(SERVICE_UUIDS.MIBAND_SERVICE);
+        this.services.MIBAND_SERVICE2 = await server.getPrimaryService(SERVICE_UUIDS.MIBAND2_SERVICE);
+        this.services.HEART_RATE = await server.getPrimaryService(SERVICE_UUIDS.HEART_RATE);
+        this.services.WEIGHT_SERVICE = await server.getPrimaryService(SERVICE_UUIDS.WEIGHT_SERVICE);
+        this.services.DEVICE_INFO = await server.getPrimaryService(SERVICE_UUIDS.DEVICE_INFO);
+        this.services.NOTIFICATIONS = await server.getPrimaryService(SERVICE_UUIDS.WEIGHT_SERVICE);
+        */
+       /*
+        console.log("Initializing Characteristics");
+        this.chars.chunkedWrite = await this.services.MIBAND_SERVICE.getCharacteristic(CHAR_UUIDS.chunked_transfer_2021_write);
+        this.chars.chunkedRead = await this.services.MIBAND_SERVICE.getCharacteristic(CHAR_UUIDS.chunked_transfer_2021_read);
+        this.chars.current_time = await this.services.MIBAND_SERVICE.getCharacteristic(CHAR_UUIDS.current_time);
+        console.log("Characteristics initialized");
+        */
+        console.log(this.services);
+        console.log("Services and CharacteristicsInitialized");
+
+
+        
+        console.log("Initializing Logging Events (Bluetooth 'notifications')");
+        await Object.keys(this.chars).map(async (char_name) => {
+            if (this.chars[char_name].properties.notify)
+            {
+                await this.startNotifications(this.chars[char_name], this.Generic_Event);
+            }
+        });
+        console.log("Logging Events (Bluetooth 'notifications') Initializing");
+        
+
+        await this.authenticate();
+    }
+
+    async Generic_Event(e) {
+        //console.log(e);
+        var target_char_name = invertDictionary(CHAR_UUIDS)[e.target.uuid]
+        var target_service_name = invertDictionary(SERVICE_UUIDS)[e.target.service.uuid]
+        var data = bufferToUint8Array(e.target.value);
+        console.log("=====" + target_service_name + " -> " + target_char_name + " -> Received Generic Data (as Uint8) : =====");
+        console.log(toHexString(data));
+        console.log(data);
+
+        if(target_char_name == "ACTIVITY_DATA")
+        {
+            var sequenceNumber = data[0]
+            data = data.slice(1) // remove batch counter
+            var stride = 65;  //8 for activity 0x01, 65 for sp02
+            for(let i=0; i<data.length-1;  i+=stride)
+            {
+                var message = "";
+                if(data[i] != 0) { console.log('Version or Data Type?: ' + data[i])}
+
+                console.log(data.slice(i+1, i+5).reverse());
+
+                var timestamp = convertToInt32(data.slice(i+1, i+5).reverse())[0]
+                var date = new Date(timestamp * 1000);
+
+                for(let j=0; j<stride; j+=1)
+                {
+                    message += data[i+j] + ", "
+                }
+                console.log(date + " : " + message)
+                //console.log(data[i]+", "+data[i+1]+", "+data[i+2]+", "+data[i+3]+", "+data[i+4]+", "+data[i+5]+", "+data[i+6]+", "+data[i+7])
+            }
+            //console.log(data.toString());
+        }
+        
+        console.log("==========")
+    }
+
+
+
+    async authenticate() {
+        await this.startNotifications(this.chars.CHUNKED_READ, async (e) => {
+            const value = new Uint8Array(e.target.value.buffer);
+            //console.log(e);
+
+            if (value.length > 1 && value[0] == 0x03) {
+                const sequenceNumber = value[4];
+                let headerSize;
+                if (
+                    sequenceNumber == 0 &&
+                    value[9] == CHUNK_ENDPOINTS.AUTH &&
+                    value[10] == 0x00 &&
+                    value[11] == 0x10 &&
+                    value[12] == 0x04 &&
+                    value[13] == 0x01
+                ) {
+                    console.log("A");
+                    this.reassembleBuffer_pointer = 0;
+                    headerSize = 14;
+                    this.reassembleBuffer_expectedBytes = value[5] - 3;
+                } else if (sequenceNumber > 0) {
+                    if (sequenceNumber != this.lastSequenceNumber + 1) {
+                        console.log("Unexpected sequence number");
+                        return;
+                    }
+                    headerSize = 5;
+                } else if (
+                    value[9] == CHUNK_ENDPOINTS.AUTH &&
+                    value[10] == 0x00 &&
+                    value[11] == 0x10 &&
+                    value[12] == 0x05 &&
+                    value[13] == 0x01
+                ) {
+                    console.log("Successfully authenticated");
+                    await this.onAuthenticated();
+                    return true;
+                } else {
+                    console.log("Unhandled characteristic change");
+                    console.log();
+                    return false;
+                }
+
+                const bytesToCopy = value.length - headerSize;
+                this.reassembleBuffer.set(
+                    new Uint8Array(value).subarray(headerSize),
+                    this.reassembleBuffer_pointer
+                );
+
+                this.reassembleBuffer_pointer += bytesToCopy;
+                this.lastSequenceNumber = sequenceNumber;
+
+                if (this.reassembleBuffer_pointer == this.reassembleBuffer_expectedBytes) {
+                    const remoteRandom = new Uint8Array(
+                        this.reassembleBuffer.subarray(0, 16)
+                    );
+                    const remotePublicEC = new Uint8Array(
+                        this.reassembleBuffer.subarray(16, 64)
+                    );
+
+                    const rpub_buf = Module._malloc(ECC_PUB_KEY_SIZE);
+                    const rpub = Module.HEAPU8.subarray(
+                        rpub_buf,
+                        rpub_buf + ECC_PUB_KEY_SIZE
+                    );
+                    rpub.set(remotePublicEC);
+
+                    const sec_buf = Module._malloc(ECC_PUB_KEY_SIZE);
+                    const sec = Module.HEAPU8.subarray(
+                        sec_buf,
+                        sec_buf + ECC_PUB_KEY_SIZE
+                    );
+
+                    Module._ecdh_shared_secret(this.prv_buf, rpub_buf, sec_buf);
+
+                    this.encryptedSequenceNr =
+                        (sec[0] & 0xff) |
+                        ((sec[1] & 0xff) << 8) |
+                        ((sec[2] & 0xff) << 16) |
+                        ((sec[3] & 0xff) << 24);
+
+                    const secretKey = aesjs.utils.hex.toBytes(this.authKey);
+                    this.secretKey = secretKey
+                    console.log(this.secretKey);
+                    const finalSharedSessionAES = new Uint8Array(16);
+                    for (let i = 0; i < 16; i++) {
+                        finalSharedSessionAES[i] = sec[i + 8] ^ this.secretKey[i];
+                    }
+                    this.sharedSessionKey = finalSharedSessionAES;
+                    //console.log(this.sharedSessionKey)
+
+                    const aesCbc1 = new aesjs.ModeOfOperation.cbc(this.secretKey);
+                    const out1 = aesCbc1.encrypt(remoteRandom);
+                    const aesCbc2 = new aesjs.ModeOfOperation.cbc(this.sharedSessionKey);
+                    const out2 = aesCbc2.encrypt(remoteRandom);
+
+                    if (out1.length == 16 && out2.length == 16) {
+                        const command = new Uint8Array(33);
+                        command[0] = 0x05;
+                        command.set(out1, 1);
+                        command.set(out2, 17);
+                        console.log("Sending 2nd auth part");
+                        await this.writeChunkedValue(
+                            this.chars.CHUNKED_WRITE,
+                            CHUNK_ENDPOINTS.AUTH,
+                            this.getNextHandle(),
+                            command
+                        );
+                    }
+                }
+                return true;
+            }
+        });
+
+        const ECC_PUB_KEY_SIZE = 48;
+        const ECC_PRV_KEY_SIZE = 24;
+
+        this.pub_buf = Module._malloc(ECC_PUB_KEY_SIZE);
+        this.prv_buf = Module._malloc(ECC_PRV_KEY_SIZE);
+        this.pub = Module.HEAPU8.subarray(
+            this.pub_buf,
+            this.pub_buf + ECC_PUB_KEY_SIZE
+        );
+        this.prv = Module.HEAPU8.subarray(
+            this.prv_buf,
+            this.prv_buf + ECC_PRV_KEY_SIZE
+        );
+
+        crypto.getRandomValues(this.prv);
+        Module._ecdh_generate_keys(this.pub_buf, this.prv_buf);
+
+        const auth = this.getInitialAuthCommand(this.pub);
+        console.log("Sending first auth");
+        await this.writeChunkedValue(
+            this.chars.CHUNKED_WRITE,
+            CHUNK_ENDPOINTS.AUTH,
+            this.getNextHandle(),
+            Uint8Array.from(auth)
+        );
+    }
+
+    getInitialAuthCommand(publicKey) {
+        return [0x04, 0x02, 0x00, 0x02, ...publicKey];
+    }
+
+    /*
+SENT
+x.writeChunk(0x0028, [0x01])
+0000   02 21 00 13 00 0f 00 04 00 52 1f 00 03 07 00 08
+0010   00 01 00 00 00 28 00 01
+
+type = 0x0028
+handle = 8
+data = [0x01]
+
+*/
+    async writeChunkedValue(char, type, handle, data) {
+        await this.writeChunkedValueFlags(char, type, handle, data, 0)
+    }
+
+    async writeChunkedValueFlags(char, type, handle, data, base_flags) {
+        //console.log("writing " + handle)
+        //console.log(data)
+        console.log(base_flags)
+
+        let remaining = data.length;
+        let count = 0;
+        let header_size = 11;
+        const mMTU = 23;
+
+        while (remaining > 0) {
+            const MAX_CHUNKLENGTH = mMTU - 3 - header_size;
+            const copybytes = Math.min(remaining, MAX_CHUNKLENGTH);
+            const chunk = new Uint8Array(copybytes + header_size);
+
+            let flags = base_flags;
+            console.log("loop: " + flags)
+
+            if (count == 0) {
+                let i = 5;
+                // Endpoint 0x0a seems to take different flag, and that affects length?
+                chunk[5] = (data.length - flags) & 0xff;
+                chunk[6] = ((data.length - flags) >> 8) & 0xff;
+                chunk[7] = ((data.length - flags) >> 16) & 0xff;
+                chunk[8] = ((data.length - flags) >> 24) & 0xff;
+                chunk[9] = type & 0xff;
+                chunk[10] = (type >> 8) & 0xff;
+                flags |= 0x01;
+                //# [0, 0, 0, 0, 0, 1, 0, 0, 0, 40, 0, 0]
+            }
+            if (remaining <= MAX_CHUNKLENGTH) {
+                flags |= 0x06; // last chunk?
+                //# 0x07
+            }
+            chunk[0] = 0x03;
+            chunk[1] = flags;
+            chunk[2] = 0;
+            chunk[3] = handle;
+            chunk[4] = count;
+            //#     [3, 7, 0, 8, 0, 1, 0, 0, 0, 40, 0, 0]
+
+            chunk.set(
+                data.slice(
+                    data.length - remaining,
+                    data.length - remaining + copybytes
+                ),
+                header_size
+            );
+            //#     [3, 7, 0, 8, 0, 1, 0, 0, 0, 40, 0, 1
+            //console.log(chunk)
+            console.log("Sending: " + toHexString(chunk));
+            await char.writeValue(chunk);
+            remaining -= copybytes;
+            header_size = 5;
+            count++;
+        }
+    }
+
+
+    // Get Activity data
+    async getActivityData() {
+        // Hook
+        await this.startNotifications(this.chars.FETCH, getActivityData_FetchEvent)
+        await this.startNotifications(this.chars.ACTIVITY_DATA, getActivityData_ActivityDataEvent)
+
+        // Setup command
+        await this.chars.FETCH.writeValueWithoutResponse(new Uint8Array([0x01, 0x01, 0xe6, 0x07, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01])); // [start, start, ..date]
+
+
+        // Release hooks
+        this.stopNotifications(this.chars.FETCH, getActivityData_FetchEvent)
+        this.stopNotifications(this.chars.ACTIVITY_DATA, getActivityData_ActivityDataEvent)
+    }
+    // Fired when FETCH has data
+    async getActivityData_FetchEvent(e) {
+        
+    }
+    // Fired when ACTIVITY_DATA has data
+    async getActivityData_ActivityDataEvent(e) {
+
+    }
+
+    async onAuthenticated() {
+        console.log("Authentication successful");
+        window.dispatchEvent(new CustomEvent("authenticated"));
+        //await this.measureHr();
+
+        /*
+        // Do 1: Get current time
+        var current_time = bufferToUint8Array( await this.chars.CURRENT_TIME.readValue() );
+        console.log(current_time);
+        console.log(toHexString(current_time));
+        */
+
+        /*
+        // Do 2: Set current time
+        await this.chars.CURRENT_TIME.writeValue(new Uint8Array([230, 7, 12,  7,  16, 27,  3,  3,  0, 0, 224]))
+
+        // Do 3: Get current time
+        current_time = bufferToUint8Array( await this.chars.CURRENT_TIME.readValue() );
+        console.log(current_time);
+        console.log(toHexString(current_time));
+        */
+
+        /*
+        // Do 4: Read current battery
+        await this.writeChunk(CHUNK_ENDPOINTS.BATTERY, [CHUNK_COMMANDS.BATTERY_GET_STATUS]);
+        */
+
+        // Connection - Responds on CHUNK_READ
+        //await this.writeChunk(CHUNK_ENDPOINTS.CONNECTION, [CHUNK_COMMANDS.READ]);
+        
+
+
+        /*
+        await this.chars.FETCH.writeValueWithoutResponse(new Uint8Array([0x01, 0x01, 0xe6, 0x07, 0x0c, 0x08, 0x01, 0x01, 0x01, 0x01])); // [start, start, ..date]
+        await this.chars.FETCH.writeValueWithoutResponse(Uint8Array.from([0x02])) // COMMAND_FETCH_DATA
+        await this.chars.FETCH.writeValueWithoutResponse(Uint8Array.from([0x03, 0x09])) //HuamiService.COMMAND_ACK_ACTIVITY_DATA, ackByte 09 to keep, 01 to delete from device
+        */
+
+         //COMMAND_ACTIVITY_DATA_START_DATE
+
+        //await this.writeChunk(0x001d, [0x04, 0x01])
+
+        // COMMAND_ACTIVITY_DATA_TYPE_ACTIVTY 0x01
+        // COMMAND_ACTIVITY_DATA_START_DATE 0x01
+        // support.getTimeBytes(sinceWhen, support.getFetchOperationsTimeUnit()))
+        // fetchBytes = [COMMAND_ACTIVITY_DATA_START_DATE, COMMAND_ACTIVITY_DATA_TYPE_ACTIVTY, 8 bytes of time data] // should only be 2 bytes of time? how? year,year,month,dayofmonth,hour,minute
+        // [0x01, 0x01, 0xe6, 0x07, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]
+        // to characteristic fetch?
+        // x.chars.FETCH.writeValueWithoutResponse(new Uint8Array([0x01, 0x01, 0xe6, 0x07, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01])); 
+        // 10 01 01 a6 01 00 00 e6 07 0c 03 12 0c 00 01 00
+        // 10 01 32
+        // x.chars.FETCH.writeValueWithoutResponse(new Uint8Array([0x02]));
+        // x.chars.FETCH.writeValueWithoutResponse(new Uint8Array([0x03, 0x09]));  // ack but don't delete data
+
+
+    }
+
+
+    async writeChunkFlags(type, command, flags) {
+        console.log(flags);
+        await this.writeChunkedValueFlags(
+            this.chars.CHUNKED_WRITE,
+            type,
+            this.getNextHandle(),
+            command,
+            flags
+        );
+
+    }
+    async writeChunk(type, command) {
+
+        await this.writeChunkedValue(
+            this.chars.CHUNKED_WRITE,
+            type,
+            this.getNextHandle(),
+            command
+        );
+
+    }
+
+    /*
+    async event_Activity_Data(e) {
+        console.log(e);
+        console.log("Received Activity Data : ", Uint8Array.from(e.target.value));
+    }
+    async event_Fetch(e) {
+        console.log(e);
+        console.log("Received Fetch Data : ", Uint8Array.from(e.target.value));
+    }*/
+
+    async measureHr() {
+        console.log("Starting heart rate measurement");
+        await this.chars.hrControl.writeValue(Uint8Array.from([0x15, 0x02, 0x00]));
+        await this.chars.hrControl.writeValue(Uint8Array.from([0x15, 0x01, 0x00]));
+        await this.startNotifications(this.chars.hrMeasure, (e) => {
+            console.log("Received heart rate value: ", e.target.value);
+            const heartRate = e.target.value.getInt16();
+            window.dispatchEvent(
+                new CustomEvent("heartrate", {
+                    detail: heartRate,
+                })
+            );
+        });
+        await this.chars.hrControl.writeValue(Uint8Array.from([0x15, 0x01, 0x01]));
+
+        // Start pinging HRM
+        this.hrmTimer =
+            this.hrmTimer ||
+            setInterval(() => {
+                console.log("Pinging heart rate monitor");
+                this.chars.hrControl.writeValue(Uint8Array.from([0x16]));
+            }, 12000);
+    }
+
+    async startNotifications(char, cb) {
+        await char.startNotifications();
+        char.addEventListener("characteristicvaluechanged", cb);
+    }
+    stopNotifications(char, cb) {
+        char.removeEventListener("characteristicvaluechanged", cb);
+    }
+}
+
+window.Band7 = Band7;
