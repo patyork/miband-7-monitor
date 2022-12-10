@@ -37,5 +37,5 @@ For data and troubleshooting, check the browser's developer console. The class c
 
 ## External Tools
 
-- [Wireshark]() Capturing traffic to/from Mi Fitness app and the Band 7
+- [Wireshark](https://www.wireshark.org/) Capturing traffic to/from Mi Fitness app and the Band 7
 - [Windows Bluetooth Virtual Sniffer](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/testing-btp-tools-btvs) Compare "Official" traffic from the Mi Fitness app versus this reconstruction.

@@ -1,6 +1,8 @@
 import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES } from "./constants.js";
 import { toHexString, bufferToUint8Array, invertDictionary } from "./tools.js";
 
+import { Authenticator } from "./components/authenticate.js";
+
 export class Band7 {
     /**
      * @param {String} authKey
@@ -13,22 +15,14 @@ export class Band7 {
                 "Invalid auth key, must be 32 hex characters such as '94359d5b8b092e1286a43cfb62ee7923'"
             );
         }
+        this.Device = null;
+        this.GATT = null;
         this.authKey = authKey;
-        this.services = {};
-        this.chars = {};
+        this.Services = {};
+        this.Chars = {};
         this.handle = 0;
 
-        this.reassembleBuffer = new Uint8Array(512);
-        this.lastSequenceNumber = 0;
-        this.reassembleBuffer_pointer = 0;
-        this.reassembleBuffer_expectedBytes = 0;
-
-        this.prv_buf = null;
-        this.pub_buf = null;
-        this.sec_buf = null;
-        this.prv = null;
-        this.pub = null;
-        this.sec = null;
+        
 
         
         this.inverted_services = invertDictionary(SERVICE_UUIDS);
@@ -44,20 +38,22 @@ export class Band7 {
     async init() {
 
         const device = await navigator.bluetooth.requestDevice({
-
-            filters: [
-                {
-                    services: [ADVERTISEMENT_SERVICE],
-                },
-            ],
-            //optionalServices: service_uuids,
+            filters: [{services: [ADVERTISEMENT_SERVICE],},],
         });
-        window.dispatchEvent(new CustomEvent("connected"));
-        await device.gatt.disconnect();
-        const server = await device.gatt.connect();
-        console.log("Connected through gatt");
-        this.server = server;
-        this.device = device;
+
+        this.Device = device
+        this.Auth = new Authenticator(this);
+        this.GATT = await this.Auth.connect();
+
+        // Helper function to start/stop the BLE notify workflow
+        this.GATT.startNotifications = async (char, cb) => {
+            await char.startNotifications();
+            char.addEventListener("characteristicvaluechanged", cb);
+        }
+        this.GATT.stopNotifications = async (char, cb) => {
+            await char.stopNotifications();
+            char.removeEventListener("characteristicvaluechanged", cb);
+        }
 
 
         console.log("Initializing Services and Characteristics");
@@ -69,7 +65,7 @@ export class Band7 {
         // Programatically discover services and characteristics
         await Promise.all(service_keys.map(async (key) => {
             try {
-                var s = await this.server.getPrimaryService(SERVICE_UUIDS[key]);
+                var s = await this.GATT.getPrimaryService(SERVICE_UUIDS[key]);
 
                 try {
                     const cs = await s.getCharacteristics();
@@ -77,62 +73,43 @@ export class Band7 {
 
                     cs.map(async (char) => {
                         var name = this.inverted_chars[char.uuid]
-                        this.chars[name] = char
-                        //char.server.name = inverted_services[char.service.uuid]
-
-                        /*
-                        // Read if able
-                        try {
-                            const c = await char.readValue();
-                            let ui8 = new Uint8Array(c.buffer, c.byteOffset, c.byteLength / Uint8Array.BYTES_PER_ELEMENT);
-                            //console.log(ui8);
-                        }
-                        catch (ex) { }
-                        */
+                        this.Chars[name] = char
                     });
                 }
                 catch (error) {
                     console.log("Service " + key + " has no characteristics")
                 }
-                this.services[key] = s;
+                this.Services[key] = s;
                 return s
             }
             catch (error) {
                 console.log("Debug : No Service " + key + " " + SERVICE_UUIDS[key]);
             }
         }));
-
-        /*
-        this.services.MIBAND_SERVICE = await server.getPrimaryService(SERVICE_UUIDS.MIBAND_SERVICE);
-        this.services.MIBAND_SERVICE2 = await server.getPrimaryService(SERVICE_UUIDS.MIBAND2_SERVICE);
-        this.services.HEART_RATE = await server.getPrimaryService(SERVICE_UUIDS.HEART_RATE);
-        this.services.WEIGHT_SERVICE = await server.getPrimaryService(SERVICE_UUIDS.WEIGHT_SERVICE);
-        this.services.DEVICE_INFO = await server.getPrimaryService(SERVICE_UUIDS.DEVICE_INFO);
-        this.services.NOTIFICATIONS = await server.getPrimaryService(SERVICE_UUIDS.WEIGHT_SERVICE);
-        */
-       /*
-        console.log("Initializing Characteristics");
-        this.chars.chunkedWrite = await this.services.MIBAND_SERVICE.getCharacteristic(CHAR_UUIDS.chunked_transfer_2021_write);
-        this.chars.chunkedRead = await this.services.MIBAND_SERVICE.getCharacteristic(CHAR_UUIDS.chunked_transfer_2021_read);
-        this.chars.current_time = await this.services.MIBAND_SERVICE.getCharacteristic(CHAR_UUIDS.current_time);
-        console.log("Characteristics initialized");
-        */
-        console.log(this.services);
         console.log("Services and CharacteristicsInitialized");
 
 
-        
         console.log("Initializing Logging Events (Bluetooth 'notifications')");
-        await Object.keys(this.chars).map(async (char_name) => {
-            if (this.chars[char_name].properties.notify)
+        await Object.keys(this.Chars).map(async (char_name) => {
+            if (this.Chars[char_name].properties.notify)
             {
-                await this.startNotifications(this.chars[char_name], this.Generic_Event);
+                await this.GATT.startNotifications(this.Chars[char_name], this.Generic_Event);
             }
         });
         console.log("Logging Events (Bluetooth 'notifications') Initializing");
+
+        this.isAuthenticated = await this.Auth.authenticate();
+
+
+        if(this.isAuthenticated) {
+            console.log("Auth'd");
+            
+        }
+        else { // TODO: Never hit
+            console.log('Error')
+        }
         
 
-        await this.authenticate();
     }
 
     async Generic_Event(e) {
@@ -174,149 +151,7 @@ export class Band7 {
 
 
 
-    async authenticate() {
-        await this.startNotifications(this.chars.CHUNKED_READ, async (e) => {
-            const value = new Uint8Array(e.target.value.buffer);
-            //console.log(e);
 
-            if (value.length > 1 && value[0] == 0x03) {
-                const sequenceNumber = value[4];
-                let headerSize;
-                if (
-                    sequenceNumber == 0 &&
-                    value[9] == CHUNK_ENDPOINTS.AUTH &&
-                    value[10] == 0x00 &&
-                    value[11] == 0x10 &&
-                    value[12] == 0x04 &&
-                    value[13] == 0x01
-                ) {
-                    console.log("A");
-                    this.reassembleBuffer_pointer = 0;
-                    headerSize = 14;
-                    this.reassembleBuffer_expectedBytes = value[5] - 3;
-                } else if (sequenceNumber > 0) {
-                    if (sequenceNumber != this.lastSequenceNumber + 1) {
-                        console.log("Unexpected sequence number");
-                        return;
-                    }
-                    headerSize = 5;
-                } else if (
-                    value[9] == CHUNK_ENDPOINTS.AUTH &&
-                    value[10] == 0x00 &&
-                    value[11] == 0x10 &&
-                    value[12] == 0x05 &&
-                    value[13] == 0x01
-                ) {
-                    console.log("Successfully authenticated");
-                    await this.onAuthenticated();
-                    return true;
-                } else {
-                    console.log("Unhandled characteristic change");
-                    console.log();
-                    return false;
-                }
-
-                const bytesToCopy = value.length - headerSize;
-                this.reassembleBuffer.set(
-                    new Uint8Array(value).subarray(headerSize),
-                    this.reassembleBuffer_pointer
-                );
-
-                this.reassembleBuffer_pointer += bytesToCopy;
-                this.lastSequenceNumber = sequenceNumber;
-
-                if (this.reassembleBuffer_pointer == this.reassembleBuffer_expectedBytes) {
-                    const remoteRandom = new Uint8Array(
-                        this.reassembleBuffer.subarray(0, 16)
-                    );
-                    const remotePublicEC = new Uint8Array(
-                        this.reassembleBuffer.subarray(16, 64)
-                    );
-
-                    const rpub_buf = Module._malloc(ECC_PUB_KEY_SIZE);
-                    const rpub = Module.HEAPU8.subarray(
-                        rpub_buf,
-                        rpub_buf + ECC_PUB_KEY_SIZE
-                    );
-                    rpub.set(remotePublicEC);
-
-                    const sec_buf = Module._malloc(ECC_PUB_KEY_SIZE);
-                    const sec = Module.HEAPU8.subarray(
-                        sec_buf,
-                        sec_buf + ECC_PUB_KEY_SIZE
-                    );
-
-                    Module._ecdh_shared_secret(this.prv_buf, rpub_buf, sec_buf);
-
-                    this.encryptedSequenceNr =
-                        (sec[0] & 0xff) |
-                        ((sec[1] & 0xff) << 8) |
-                        ((sec[2] & 0xff) << 16) |
-                        ((sec[3] & 0xff) << 24);
-
-                    const secretKey = aesjs.utils.hex.toBytes(this.authKey);
-                    this.secretKey = secretKey
-                    console.log(this.secretKey);
-                    const finalSharedSessionAES = new Uint8Array(16);
-                    for (let i = 0; i < 16; i++) {
-                        finalSharedSessionAES[i] = sec[i + 8] ^ this.secretKey[i];
-                    }
-                    this.sharedSessionKey = finalSharedSessionAES;
-                    //console.log(this.sharedSessionKey)
-
-                    const aesCbc1 = new aesjs.ModeOfOperation.cbc(this.secretKey);
-                    const out1 = aesCbc1.encrypt(remoteRandom);
-                    const aesCbc2 = new aesjs.ModeOfOperation.cbc(this.sharedSessionKey);
-                    const out2 = aesCbc2.encrypt(remoteRandom);
-
-                    if (out1.length == 16 && out2.length == 16) {
-                        const command = new Uint8Array(33);
-                        command[0] = 0x05;
-                        command.set(out1, 1);
-                        command.set(out2, 17);
-                        console.log("Sending 2nd auth part");
-                        await this.writeChunkedValue(
-                            this.chars.CHUNKED_WRITE,
-                            CHUNK_ENDPOINTS.AUTH,
-                            this.getNextHandle(),
-                            command
-                        );
-                    }
-                }
-                return true;
-            }
-        });
-
-        const ECC_PUB_KEY_SIZE = 48;
-        const ECC_PRV_KEY_SIZE = 24;
-
-        this.pub_buf = Module._malloc(ECC_PUB_KEY_SIZE);
-        this.prv_buf = Module._malloc(ECC_PRV_KEY_SIZE);
-        this.pub = Module.HEAPU8.subarray(
-            this.pub_buf,
-            this.pub_buf + ECC_PUB_KEY_SIZE
-        );
-        this.prv = Module.HEAPU8.subarray(
-            this.prv_buf,
-            this.prv_buf + ECC_PRV_KEY_SIZE
-        );
-
-        crypto.getRandomValues(this.prv);
-        Module._ecdh_generate_keys(this.pub_buf, this.prv_buf);
-
-        const auth = this.getInitialAuthCommand(this.pub);
-        console.log("Sending first auth");
-        await this.writeChunkedValue(
-            this.chars.CHUNKED_WRITE,
-            CHUNK_ENDPOINTS.AUTH,
-            this.getNextHandle(),
-            Uint8Array.from(auth)
-        );
-    }
-
-    getInitialAuthCommand(publicKey) {
-        return [0x04, 0x02, 0x00, 0x02, ...publicKey];
-    }
 
     /*
 SENT
@@ -533,7 +368,8 @@ data = [0x01]
         await char.startNotifications();
         char.addEventListener("characteristicvaluechanged", cb);
     }
-    stopNotifications(char, cb) {
+    async stopNotifications(char, cb) {
+        await char.stopNotifications();
         char.removeEventListener("characteristicvaluechanged", cb);
     }
 }
