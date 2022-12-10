@@ -4,6 +4,7 @@ View Xiaomi Band 7 Data within your browser.
 
 
 Changelog:
+- Auth and Sp02 retrieval set up as synchronous components -> Leads to stable workflows without need of a Queue to manage fetching/receipt/delegation to post-processing by expected/reconstructed data types.
 - Updated BLE UUIDs, Endpoints, and other constants to work with the updated Xiaomi/Amazfit?/ZeppOS firmwares
 - **Fixed authentication so it works with modern firmwares (Thanks Gadgetbridge for the inspiration, tiny-ecdh-c for elliptic curve Diffie-Hellman implementation)** 
 
@@ -21,7 +22,7 @@ Changelog:
 3. Click connect
 4. TODO: Acquire data and display
 
-For data and troubleshooting, check the browser's developer console. The class can be interacted with via a `band = new Band7("0e5b827d9b8cded4a0fd0ab345b881d4"); band.init();` call in the console.
+For data and troubleshooting, check the browser's developer console. The class can be interacted with via a `band = new Band7("94359d5b8b092e1286a43cfb62ee7923"); band.init();` call in the console.
 
 ## Inspiration
 - [hgzalo/miband-6-heart-rate-monitor](https://github.com/gzalo/miband-6-heart-rate-monitor) The latest maintainer in the chain - implemented the new Auth

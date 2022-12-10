@@ -3,6 +3,7 @@ import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUN
 export class Authenticator extends EventTarget {
     constructor(band) {
         super()
+        var self = this;
         this.Band = band;
 
         this.ECC_PUB_KEY_SIZE = 48;
@@ -29,7 +30,11 @@ export class Authenticator extends EventTarget {
     }
 
     async authenticate() {
-        await this.Band.GATT.startNotifications(this.Band.Chars.CHUNKED_READ, async (e) => this.onChunkedRead(e)) // ()=> format to maintain this
+        var self = this
+        self.listenerOnChunk = async (e) => this.onChunkedRead(e)
+
+        // Hook
+        await this.Band.GATT.startNotifications(this.Band.Chars.CHUNKED_READ, self.listenerOnChunk)
 
         this.pub_buf = Module._malloc(this.ECC_PUB_KEY_SIZE);
         this.prv_buf = Module._malloc(this.ECC_PRV_KEY_SIZE);
@@ -54,12 +59,17 @@ export class Authenticator extends EventTarget {
             Uint8Array.from(auth)
         );
 
-        return new Promise( (resolve, reject) => {
-            this.addEventListener('authentication_result', function(e) {
+        await new Promise((resolve, reject) => {
+            this.addEventListener('authentication_result', function (e) {
                 //console.log(e)
-              resolve(e.detail); // done
+                resolve(e.detail); // done
             });
-          });
+        });
+        
+        // Unhook
+        await this.Band.GATT.stopNotifications(this.Band.Chars.CHUNKED_READ, self.listenerOnChunk);
+
+        return new Promise((resolve, reject) => {resolve(true)})
     }
 
     getInitialAuthCommand(publicKey) {
@@ -68,7 +78,7 @@ export class Authenticator extends EventTarget {
 
     async onChunkedRead (e) {
         const value = new Uint8Array(e.target.value.buffer);
-        //console.log(e);
+        console.log("authenticator notified");
 
         if (value.length > 1 && value[0] == 0x03) {
             const sequenceNumber = value[4];

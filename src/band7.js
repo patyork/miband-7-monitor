@@ -2,6 +2,7 @@ import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUN
 import { toHexString, bufferToUint8Array, invertDictionary } from "./tools.js";
 
 import { Authenticator } from "./components/authenticate.js";
+import { sp02Reader } from "./components/sp02.js";
 
 export class Band7 {
     /**
@@ -22,7 +23,7 @@ export class Band7 {
         this.Chars = {};
         this.handle = 0;
 
-        
+        this.Auth, this.sp02Reader = null,
 
         
         this.inverted_services = invertDictionary(SERVICE_UUIDS);
@@ -45,13 +46,13 @@ export class Band7 {
         this.Auth = new Authenticator(this);
         this.GATT = await this.Auth.connect();
 
-        // Helper function to start/stop the BLE notify workflow
+        // Helper function to start/stop the BLE notify workflow on a Characteristic
         this.GATT.startNotifications = async (char, cb) => {
             await char.startNotifications();
             char.addEventListener("characteristicvaluechanged", cb);
         }
         this.GATT.stopNotifications = async (char, cb) => {
-            await char.stopNotifications();
+            //await char.stopNotifications();
             char.removeEventListener("characteristicvaluechanged", cb);
         }
 
@@ -103,6 +104,9 @@ export class Band7 {
 
         if(this.isAuthenticated) {
             console.log("Auth'd");
+
+            this.sp02Reader = new sp02Reader(this);
+            await this.sp02Reader.readSince(new Date());
             
         }
         else { // TODO: Never hit
@@ -167,7 +171,6 @@ data = [0x01]
     async writeChunkedValue(char, type, handle, data) {
         await this.writeChunkedValueFlags(char, type, handle, data, 0)
     }
-
     async writeChunkedValueFlags(char, type, handle, data, base_flags) {
         //console.log("writing " + handle)
         //console.log(data)
@@ -224,6 +227,27 @@ data = [0x01]
             header_size = 5;
             count++;
         }
+    }
+    async writeChunkFlags(type, command, flags) {
+        console.log(flags);
+        await this.writeChunkedValueFlags(
+            this.chars.CHUNKED_WRITE,
+            type,
+            this.getNextHandle(),
+            command,
+            flags
+        );
+
+    }
+    async writeChunk(type, command) {
+
+        await this.writeChunkedValue(
+            this.chars.CHUNKED_WRITE,
+            type,
+            this.getNextHandle(),
+            command
+        );
+
     }
 
 
@@ -308,27 +332,7 @@ data = [0x01]
     }
 
 
-    async writeChunkFlags(type, command, flags) {
-        console.log(flags);
-        await this.writeChunkedValueFlags(
-            this.chars.CHUNKED_WRITE,
-            type,
-            this.getNextHandle(),
-            command,
-            flags
-        );
-
-    }
-    async writeChunk(type, command) {
-
-        await this.writeChunkedValue(
-            this.chars.CHUNKED_WRITE,
-            type,
-            this.getNextHandle(),
-            command
-        );
-
-    }
+    
 
     /*
     async event_Activity_Data(e) {
@@ -340,38 +344,7 @@ data = [0x01]
         console.log("Received Fetch Data : ", Uint8Array.from(e.target.value));
     }*/
 
-    async measureHr() {
-        console.log("Starting heart rate measurement");
-        await this.chars.hrControl.writeValue(Uint8Array.from([0x15, 0x02, 0x00]));
-        await this.chars.hrControl.writeValue(Uint8Array.from([0x15, 0x01, 0x00]));
-        await this.startNotifications(this.chars.hrMeasure, (e) => {
-            console.log("Received heart rate value: ", e.target.value);
-            const heartRate = e.target.value.getInt16();
-            window.dispatchEvent(
-                new CustomEvent("heartrate", {
-                    detail: heartRate,
-                })
-            );
-        });
-        await this.chars.hrControl.writeValue(Uint8Array.from([0x15, 0x01, 0x01]));
-
-        // Start pinging HRM
-        this.hrmTimer =
-            this.hrmTimer ||
-            setInterval(() => {
-                console.log("Pinging heart rate monitor");
-                this.chars.hrControl.writeValue(Uint8Array.from([0x16]));
-            }, 12000);
-    }
-
-    async startNotifications(char, cb) {
-        await char.startNotifications();
-        char.addEventListener("characteristicvaluechanged", cb);
-    }
-    async stopNotifications(char, cb) {
-        await char.stopNotifications();
-        char.removeEventListener("characteristicvaluechanged", cb);
-    }
+    
 }
 
 window.Band7 = Band7;
