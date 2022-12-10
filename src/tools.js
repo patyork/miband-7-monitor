@@ -19,8 +19,31 @@ export function bufferToUint8Array(data)
     return new Uint8Array(data.buffer, data.byteOffset, data.byteLength / Uint8Array.BYTES_PER_ELEMENT)
 }
 
+//https://stackoverflow.com/a/49129872
+export function concatUint8Arrays(array1, array2) {
+    var mergedArray = new Uint8Array(array1.length + array2.length);
+    // Deep copy
+    mergedArray.set([...array1]);
+    mergedArray.set([...array2], array1.length);
+    return mergedArray;
+}
+
 export const invertDictionary = (data) => Object.fromEntries(
     Object
       .entries(data)
       .map(([key, value]) => [value, key])
     );
+
+export function arraysEqual(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length !== b.length) return false;
+  
+    // If you don't care about the order of the elements inside
+    // the array, you should sort both arrays here.
+  
+    for (var i = 0; i < a.length; ++i) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }

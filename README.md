@@ -4,6 +4,7 @@ View Xiaomi Band 7 Data within your browser.
 
 
 Changelog:
+- Auth and Sp02 retrieval set up as synchronous components -> Leads to stable workflows without need of a Queue to manage fetching/receipt/delegation to post-processing by expected/reconstructed data types.
 - Updated BLE UUIDs, Endpoints, and other constants to work with the updated Xiaomi/Amazfit?/ZeppOS firmwares
 - **Fixed authentication so it works with modern firmwares (Thanks Gadgetbridge for the inspiration, tiny-ecdh-c for elliptic curve Diffie-Hellman implementation)** 
 
@@ -37,5 +38,5 @@ For data and troubleshooting, check the browser's developer console. The class c
 
 ## External Tools
 
-- [Wireshark]() Capturing traffic to/from Mi Fitness app and the Band 7
+- [Wireshark](https://www.wireshark.org/) Capturing traffic to/from Mi Fitness app and the Band 7
 - [Windows Bluetooth Virtual Sniffer](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/testing-btp-tools-btvs) Compare "Official" traffic from the Mi Fitness app versus this reconstruction.
