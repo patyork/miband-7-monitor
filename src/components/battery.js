@@ -7,7 +7,7 @@ export class batteryReader extends EventTarget {
         super()
         this.Band = band;
 
-        this.rawBatteryData = new Uint8Array();
+        this.rawBatteryData = null;
         this.BatteryData = null;
     }
 
@@ -38,14 +38,22 @@ export class batteryReader extends EventTarget {
         var raw = bufferToUint8Array(e.target.value);
         
         if(raw.length == 32) {
-            var header = raw.slice(0, 12); // TODO: Parse header to ensure this is a BATTERY,RESULT_OK
-            var rawData = raw.slice(12);
-
-            this.rawBatteryData = concatUint8Arrays(this.rawBatteryData, rawData);
-            this.BatteryData = new BatteryData(this.rawBatteryData);
+            this.parseRaw(raw)
 
             this.dispatchEvent( new CustomEvent('battery_end', {detail: true}));
         }
+    }
 
+    parseRaw(raw) {
+        console.log("Parsing Raw Battery Data...")
+        
+        if(raw.length == 32) {
+            var header = raw.slice(0, 12); // TODO: Parse header to ensure this is a BATTERY,RESULT_OK
+            var rawData = raw.slice(12);
+
+            this.rawBatteryData = [...rawData];
+            this.BatteryData = new BatteryData(this.rawBatteryData);
+            console.log(this.BatteryData);
+        }
     }
 }

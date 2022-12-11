@@ -23,16 +23,21 @@ export class BatteryData {
             var hour = this.rawData[15]
             var minute = this.rawData[16]
             var second = this.rawData[17]
-            //console.log(year, month, day)
-            //console.log(hour + " | " + minute + " | " + second)
             this.lastChargeTime = new Date(year, month, day, hour, minute, second)
         }
         else if( this.rawData.length == 32 ) // Header included
         {
-            var header = raw.slice(0, 12); // TODO: Parse header to ensure this is a BATTERY,RESULT_OK
-            var rawData = raw.slice(12);
-            this.rawData = [...rawData]
-            this.parseData();
+            var header = raw.slice(0, 11 +1);
+            var endpoint = header.slice(9, 10 +1).reverse();
+            var command = header[11];
+            if( convertToInt16Array(endpoint)[0], CHUNK_ENDPOINTS.BATTERY )
+            {
+                if(command == CHUNK_RESPONSES.RESULT_OK) {
+                    var rawData = raw.slice(12);
+                    this.rawData = [...rawData]
+                    this.parseData();
+                }
+            }
         }
     }
 }

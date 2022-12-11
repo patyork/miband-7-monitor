@@ -1,5 +1,5 @@
-import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES } from "./constants.js";
-import { toHexString, bufferToUint8Array, invertDictionary } from "./tools.js";
+import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES, CHUNK_RESPONSES } from "./constants.js";
+import { toHexString, bufferToUint8Array, invertDictionary, arraysEqual, convertToInt16Array } from "./tools.js";
 
 import { Authenticator } from "./components/authenticate.js";
 import { sp02Reader } from "./components/sp02.js";
@@ -25,7 +25,6 @@ export class Band7 {
         this.handle = 0;
 
         this.Auth, this.sp02Reader, this.batteryReader = null; // Readers
-        this.Sp02Data, this.BatteryData = null; // Data
 
         
         this.inverted_services = invertDictionary(SERVICE_UUIDS);
@@ -110,12 +109,15 @@ export class Band7 {
             this.sp02Reader = new sp02Reader(this);
             this.batteryReader = new batteryReader(this);
 
+            // Read sp02 Data
             //await this.sp02Reader.readSince(new Date());
 
-
+            // Read Battery Data
             await this.batteryReader.Read();
-            this.BatteryData = this.batteryReader.BatteryData;
-            
+
+            // Hook async READ events (Battery, Connection, etc.)
+            await this.GATT.startNotifications(this.Chars.CHUNKED_READ, async (e) => this.onChunkedRead(e))
+
         }
         else { // TODO
             console.log('Error')
@@ -159,6 +161,24 @@ export class Band7 {
         }
         
         console.log("==========")
+    }
+    async onChunkedRead(e) {
+        console.log(" Main : CHUNK_READ")
+        var raw = bufferToUint8Array(e.target.value);
+
+        if(raw.length >= 12) {
+            var header = raw.slice(0, 11+1);
+            var endpoint = header.slice(9, 10+1).reverse();
+            var command = header[11];
+
+            // Battery
+            if( convertToInt16Array(endpoint)[0], CHUNK_ENDPOINTS.BATTERY )
+            {
+                if(command == CHUNK_RESPONSES.RESULT_OK) {
+                    this.batteryReader.parseRaw(raw);
+                }
+            }
+        }
     }
 
 
