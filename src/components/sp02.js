@@ -1,5 +1,6 @@
 import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES } from "../constants.js";
 import { toHexString, bufferToUint8Array, arraysEqual, concatUint8Arrays } from "../tools.js";
+import { Sp02Data } from "../models/sp02.js";
 
 export class sp02Reader extends EventTarget {
     constructor(band) {
@@ -19,8 +20,8 @@ export class sp02Reader extends EventTarget {
             version: -1,
         }
 
-        this.activityData = new Uint8Array();
-
+        this.rawSp02Data = new Uint8Array();
+        this.Sp02Data = new Sp02Data();
         
         
     }
@@ -92,6 +93,10 @@ export class sp02Reader extends EventTarget {
         {
             await this.Band.Chars.FETCH.writeValueWithoutResponse(Uint8Array.from([0x03, 0x09])) //HuamiService.COMMAND_ACK_ACTIVITY_DATA, ackByte 09 to keep, 01 to delete from device
 
+            // Parse
+            console.log("parsing data now..")
+            this.Sp02Data.parseData(this.rawSp02Data);
+
             this.dispatchEvent( new CustomEvent('transfer_end', {detail: true}));
             
             // Unhook
@@ -109,32 +114,20 @@ export class sp02Reader extends EventTarget {
 
         this.status.currentBatch = raw[0]
         this.status.version = raw[1] > 0 ? raw[1] : this.status.version;
-        var data = raw.slice(1) // remove batch counter
+        var data = raw.slice(1) // remove batch counter; TODO: ensure that it is the next expected packet
 
-        var stride = 65;  //8 for activity 0x01, 65 for sp02
+        var stride = 65;  //65 for sp02
 
-        if((data.length - 1) % stride == 0) {console.log("Last packet!"); data = data.slice(0, data.length-1)} // last packet, 1 byte longer
-        else if(data.length % stride != 0) {console.error("Incorrect size returned from device.")}
-        this.activityData = concatUint8Arrays(this.activityData, data)
-
-        // Temporary, for display only
-        for(let i=1; i<data.length-1;  i+=stride) // start at 1 to skip the version placeholder
-        {
-            var message = "";
-
-            //console.log(data.slice(i, i+4).reverse());
-
-            var timestamp = convertToInt32(data.slice(i, i+4).reverse())[0]
-            var date = new Date(timestamp * 1000);
-
-            for(let j=0; j<stride; j+=1)
-            {
-                message += data[i+j] + ", "
-            }
-            console.log(date + " : " + message)
-            //console.log(data[i]+", "+data[i+1]+", "+data[i+2]+", "+data[i+3]+", "+data[i+4]+", "+data[i+5]+", "+data[i+6]+", "+data[i+7])
+        if((data.length - 1) % stride == 0) {  // last packet, 1 byte longer
+            //console.log("Last packet!");
+            data = data.slice(0, data.length-1)
         }
-        //console.log(data.toString());
         
+        if(data.length % stride != 0) {
+            console.error("Incorrect size returned from device.")
+        }
+        else {
+            this.rawSp02Data = concatUint8Arrays(this.rawSp02Data, data);
+        }
     }
 }

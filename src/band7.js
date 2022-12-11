@@ -110,10 +110,10 @@ export class Band7 {
             this.batteryReader = new batteryReader(this);
 
             // Read sp02 Data
-            //await this.sp02Reader.readSince(new Date());
+            await this.sp02Reader.readSince(new Date());
 
             // Read Battery Data
-            await this.batteryReader.Read();
+            //await this.batteryReader.Read();
 
             // Hook async READ events (Battery, Connection, etc.)
             await this.GATT.startNotifications(this.Chars.CHUNKED_READ, async (e) => this.onChunkedRead(e))
@@ -137,8 +137,10 @@ export class Band7 {
 
         if(target_char_name == "ACTIVITY_DATA")
         {
+            console.log(data);
+            console.log(data.toString());
             var sequenceNumber = data[0]
-            data = data.slice(1) // remove batch counter
+            /*data = data.slice(1) // remove batch counter
             var stride = 65;  //8 for activity 0x01, 65 for sp02
             for(let i=0; i<data.length-1;  i+=stride)
             {
@@ -157,7 +159,7 @@ export class Band7 {
                 console.log(date + " : " + message)
                 //console.log(data[i]+", "+data[i+1]+", "+data[i+2]+", "+data[i+3]+", "+data[i+4]+", "+data[i+5]+", "+data[i+6]+", "+data[i+7])
             }
-            //console.log(data.toString());
+            */
         }
         
         console.log("==========")
