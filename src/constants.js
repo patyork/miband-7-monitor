@@ -103,8 +103,11 @@ export const CHUNK_COMMANDS = {
     //UNKNOW1_READ            : 0x01,
 
     // BATTERY 0x0029
-    BATTERY_GET_STATUS      : 0x03,
+    BATTERY_GET_STATUS      : 0x0003,
 
+}
+export const CHUNK_RESPONSES = {
+    RESULT_OK   : 0x0004,
 }
 
 export const FETCH_COMMANDS = {

@@ -3,6 +3,7 @@ import { toHexString, bufferToUint8Array, invertDictionary } from "./tools.js";
 
 import { Authenticator } from "./components/authenticate.js";
 import { sp02Reader } from "./components/sp02.js";
+import { batteryReader } from "./components/battery.js";
 
 export class Band7 {
     /**
@@ -23,7 +24,8 @@ export class Band7 {
         this.Chars = {};
         this.handle = 0;
 
-        this.Auth, this.sp02Reader = null,
+        this.Auth, this.sp02Reader, this.batteryReader = null; // Readers
+        this.Sp02Data, this.BatteryData = null; // Data
 
         
         this.inverted_services = invertDictionary(SERVICE_UUIDS);
@@ -106,10 +108,16 @@ export class Band7 {
             console.log("Auth'd");
 
             this.sp02Reader = new sp02Reader(this);
-            await this.sp02Reader.readSince(new Date());
+            this.batteryReader = new batteryReader(this);
+
+            //await this.sp02Reader.readSince(new Date());
+
+
+            await this.batteryReader.Read();
+            this.BatteryData = this.batteryReader.BatteryData;
             
         }
-        else { // TODO: Never hit
+        else { // TODO
             console.log('Error')
         }
         
@@ -154,20 +162,6 @@ export class Band7 {
     }
 
 
-
-
-
-    /*
-SENT
-x.writeChunk(0x0028, [0x01])
-0000   02 21 00 13 00 0f 00 04 00 52 1f 00 03 07 00 08
-0010   00 01 00 00 00 28 00 01
-
-type = 0x0028
-handle = 8
-data = [0x01]
-
-*/
     async writeChunkedValue(char, type, handle, data) {
         await this.writeChunkedValueFlags(char, type, handle, data, 0)
     }
@@ -231,7 +225,7 @@ data = [0x01]
     async writeChunkFlags(type, command, flags) {
         console.log(flags);
         await this.writeChunkedValueFlags(
-            this.chars.CHUNKED_WRITE,
+            this.Chars.CHUNKED_WRITE,
             type,
             this.getNextHandle(),
             command,
@@ -242,7 +236,7 @@ data = [0x01]
     async writeChunk(type, command) {
 
         await this.writeChunkedValue(
-            this.chars.CHUNKED_WRITE,
+            this.Chars.CHUNKED_WRITE,
             type,
             this.getNextHandle(),
             command
@@ -250,29 +244,6 @@ data = [0x01]
 
     }
 
-
-    // Get Activity data
-    async getActivityData() {
-        // Hook
-        await this.startNotifications(this.chars.FETCH, getActivityData_FetchEvent)
-        await this.startNotifications(this.chars.ACTIVITY_DATA, getActivityData_ActivityDataEvent)
-
-        // Setup command
-        await this.chars.FETCH.writeValueWithoutResponse(new Uint8Array([0x01, 0x01, 0xe6, 0x07, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01])); // [start, start, ..date]
-
-
-        // Release hooks
-        this.stopNotifications(this.chars.FETCH, getActivityData_FetchEvent)
-        this.stopNotifications(this.chars.ACTIVITY_DATA, getActivityData_ActivityDataEvent)
-    }
-    // Fired when FETCH has data
-    async getActivityData_FetchEvent(e) {
-        
-    }
-    // Fired when ACTIVITY_DATA has data
-    async getActivityData_ActivityDataEvent(e) {
-
-    }
 
     async onAuthenticated() {
         console.log("Authentication successful");
@@ -330,19 +301,6 @@ data = [0x01]
 
 
     }
-
-
-    
-
-    /*
-    async event_Activity_Data(e) {
-        console.log(e);
-        console.log("Received Activity Data : ", Uint8Array.from(e.target.value));
-    }
-    async event_Fetch(e) {
-        console.log(e);
-        console.log("Received Fetch Data : ", Uint8Array.from(e.target.value));
-    }*/
 
     
 }

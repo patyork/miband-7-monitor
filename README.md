@@ -4,6 +4,7 @@ View Xiaomi Band 7 Data within your browser.
 
 
 Changelog:
+- Synchronous Battery information
 - Auth and Sp02 retrieval set up as synchronous components -> Leads to stable workflows without need of a Queue to manage fetching/receipt/delegation to post-processing by expected/reconstructed data types.
 - Updated BLE UUIDs, Endpoints, and other constants to work with the updated Xiaomi/Amazfit?/ZeppOS firmwares
 - **Fixed authentication so it works with modern firmwares (Thanks Gadgetbridge for the inspiration, tiny-ecdh-c for elliptic curve Diffie-Hellman implementation)** 
