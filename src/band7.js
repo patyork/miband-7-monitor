@@ -4,6 +4,7 @@ import { toHexString, bufferToUint8Array, invertDictionary, arraysEqual, convert
 import { Authenticator } from "./components/authenticate.js";
 import { sp02Reader } from "./components/sp02.js";
 import { batteryReader } from "./components/battery.js";
+import { activityReader } from "./components/activity.js";
 
 export class Band7 {
     /**
@@ -108,12 +109,16 @@ export class Band7 {
 
             this.sp02Reader = new sp02Reader(this);
             this.batteryReader = new batteryReader(this);
+            this.activityReader = new activityReader(this);
 
             // Read sp02 Data
-            await this.sp02Reader.readSince(new Date());
+            //await this.sp02Reader.readSince(new Date());
 
             // Read Battery Data
             //await this.batteryReader.Read();
+
+            // Read Activity Data
+            await this.activityReader.readSince(new Date());
 
             // Hook async READ events (Battery, Connection, etc.)
             await this.GATT.startNotifications(this.Chars.CHUNKED_READ, async (e) => this.onChunkedRead(e))
