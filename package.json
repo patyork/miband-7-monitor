@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "clean": "shx rm dist/*",
-    "build": "esbuild --bundle src/index.js --outfile=dist/bundle.js && shx cp src/index.html src/style.css src/aes.js src/ecdh.js src/ecdh.wasm dist/",
+    "build": "esbuild --bundle src/band7.js --outfile=dist/band7.js && shx cp src/index.html src/style.css src/ecdh.js src/ecdh.wasm dist/",
     "serve": "npm run build && npx http-server dist/ -p 8081",
     "lint": "prettier --write src/"
   },
