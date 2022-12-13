@@ -68,7 +68,7 @@
           chart.update(e.detail);
         });
         try {
-          window.miband = new MiBand7(authKey);
+          window.miband = new Band7(authKey);
           await window.miband.init();
         } catch (e) {
           alert(e.message);

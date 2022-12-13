@@ -4,6 +4,7 @@ View Xiaomi Band 7 Data within your browser.
 
 
 Changelog:
+- Activity functions and data model. Fixed some date issues, may move to a JS date library.
 - Sp02 Data Model
 - Async Battery Information
 - Synchronous Battery information; Battery data model
