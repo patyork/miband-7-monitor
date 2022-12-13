@@ -1,5 +1,5 @@
 import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES } from "../constants.js";
-import { toHexString, bufferToUint8Array, arraysEqual, concatUint8Arrays } from "../tools.js";
+import { toHexString, bufferToUint8Array, arraysEqual, concatUint8Arrays, dateAdd, dateToUTCWatchDateArray } from "../tools.js";
 import { Sp02Data } from "../models/sp02.js";
 
 export class sp02Reader extends EventTarget {
@@ -28,10 +28,12 @@ export class sp02Reader extends EventTarget {
 
     async readSince(datetime) {
         // Preprocess
-        if(datetime === null)
+        if(datetime == null)
         {
-
+            datetime = new Date();
+            datetime = dateAdd(datetime, 'hour', -1);
         }
+        datetime = dateToUTCWatchDateArray(datetime);
 
         var self = this
         self.listenerOnFetch = async (e) => this.onFetchRead(e)
@@ -43,7 +45,7 @@ export class sp02Reader extends EventTarget {
 
         // Send Start Command 1: Type and Data Type   failure: 10 01 32, timeout    ready: 10 01 01
         await this.Band.Chars.FETCH.writeValueWithoutResponse(
-            new Uint8Array([FETCH_COMMANDS.FROM_DATE, FETCH_DATA_TYPES.SP02_DATA, 0xe6, 0x07, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01])); // [start, type, ..date]
+            new Uint8Array([FETCH_COMMANDS.FROM_DATE, FETCH_DATA_TYPES.SP02_DATA,  ...datetime,   0x01])); // [start, type, ..date]
         await new Promise( (resolve, reject) => {
             this.addEventListener('fetch_start', function(e) {
                 resolve(e.detail); // done

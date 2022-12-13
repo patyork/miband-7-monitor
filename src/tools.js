@@ -38,34 +38,60 @@ export  function convertToInt16Array(bytes) {
 
 
 
-  // https://stackoverflow.com/questions/1197928/how-to-add-30-minutes-to-a-javascript-date-object
-  /**
- * Adds time to a date. Modelled after MySQL DATE_ADD function.
- * Example: dateAdd(new Date(), 'minute', 30)  //returns 30 minutes from now.
- * https://stackoverflow.com/a/1214753/18511
- * 
- * @param date  Date to start with
- * @param interval  One of: year, quarter, month, week, day, hour, minute, second
- * @param units  Number of units of the given interval to add.
- */
+// https://stackoverflow.com/questions/1197928/how-to-add-30-minutes-to-a-javascript-date-object
+/**
+* Adds time to a date. Modelled after MySQL DATE_ADD function.
+* Example: dateAdd(new Date(), 'minute', 30)  //returns 30 minutes from now.
+* https://stackoverflow.com/a/1214753/18511
+* 
+* @param date  Date to start with
+* @param interval  One of: year, quarter, month, week, day, hour, minute, second
+* @param units  Number of units of the given interval to add.
+*/
 export function dateAdd(date, interval, units) {
-    if(!(date instanceof Date))
-      return undefined;
+    if (!(date instanceof Date))
+        return undefined;
     var ret = new Date(date); //don't change original date
-    var checkRollover = function() { if(ret.getDate() != date.getDate()) ret.setDate(0);};
-    switch(String(interval).toLowerCase()) {
-      case 'year'   :  ret.setFullYear(ret.getFullYear() + units); checkRollover();  break;
-      case 'quarter':  ret.setMonth(ret.getMonth() + 3*units); checkRollover();  break;
-      case 'month'  :  ret.setMonth(ret.getMonth() + units); checkRollover();  break;
-      case 'week'   :  ret.setDate(ret.getDate() + 7*units);  break;
-      case 'day'    :  ret.setDate(ret.getDate() + units);  break;
-      case 'hour'   :  ret.setTime(ret.getTime() + units*3600000);  break;
-      case 'minute' :  ret.setTime(ret.getTime() + units*60000);  break;
-      case 'second' :  ret.setTime(ret.getTime() + units*1000);  break;
-      default       :  ret = undefined;  break;
+    var checkRollover = function () { if (ret.getDate() != date.getDate()) ret.setDate(0); };
+    switch (String(interval).toLowerCase()) {
+        case 'year': ret.setFullYear(ret.getFullYear() + units); checkRollover(); break;
+        case 'quarter': ret.setMonth(ret.getMonth() + 3 * units); checkRollover(); break;
+        case 'month': ret.setMonth(ret.getMonth() + units); checkRollover(); break;
+        case 'week': ret.setDate(ret.getDate() + 7 * units); break;
+        case 'day': ret.setDate(ret.getDate() + units); break;
+        case 'hour': ret.setTime(ret.getTime() + units * 3600000); break;
+        case 'minute': ret.setTime(ret.getTime() + units * 60000); break;
+        case 'second': ret.setTime(ret.getTime() + units * 1000); break;
+        default: ret = undefined; break;
     }
     return ret;
-  }
+}
+
+
+// https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
+export function yearAsArray(year) {
+    var byteArray = new Uint8Array([0, 0]);
+    for ( var index = 0; index < byteArray.length; index ++ ) {
+        var byte = year & 0xff;
+        byteArray [ index ] = byte;
+        year = (year - byte) / 256 ;
+    }
+    return byteArray;
+};
+
+export function dateToUTCWatchDateArray(date) {
+    // components in UTC and correct values
+    var year = date.getUTCFullYear()
+    var month = date.getUTCMonth() + 1
+    var day = date.getUTCDate()
+    var hour = date.getUTCHours()
+    var minute = date.getUTCMinutes()
+    var seconds = date.getUTCSeconds()
+
+    // Values to byte array
+    year2 = yearAsArray(year);
+    return new Uint8Array([...year2, month, day, hour, minute, seconds]);
+}
 
 export function bufferToUint8Array(data)
 {

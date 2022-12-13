@@ -1,5 +1,5 @@
 import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES } from "../constants.js";
-import { toHexString, bufferToUint8Array, arraysEqual, concatUint8Arrays, convertToInt16Array } from "../tools.js";
+import { toHexString, bufferToUint8Array, arraysEqual, concatUint8Arrays, convertToInt16Array, dateAdd, dateToUTCWatchDateArray } from "../tools.js";
 import { ActivityData } from "../models/activity.js";
 
 export class activityReader extends EventTarget {
@@ -28,10 +28,12 @@ export class activityReader extends EventTarget {
 
     async readSince(datetime) {
         // Preprocess
-        if(datetime === null)
+        if(datetime == null)
         {
-
+            datetime = new Date();
+            datetime = dateAdd(datetime, 'hour', -1);
         }
+        datetime = dateToUTCWatchDateArray(datetime);
 
         var self = this
         self.listenerOnFetch = async (e) => this.onFetchRead(e)
@@ -43,8 +45,7 @@ export class activityReader extends EventTarget {
 
         // Send Start Command 1: Type and Data Type   failure: 10 01 32, timeout    ready: 10 01 01
         await this.Band.Chars.FETCH.writeValueWithoutResponse(
-            //{date: Sun Dec 04 2022 01:13:00 GMT-0800 (Pacific Standard Time), rawKind: 80, rawIntensity: 10, steps: 0, heartRate: 73, …}
-            new Uint8Array([FETCH_COMMANDS.FROM_DATE, FETCH_DATA_TYPES.ACTIVITY_DATA, 0xe6, 0x07, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00])); // [start, type, ..date]
+            new Uint8Array([FETCH_COMMANDS.FROM_DATE, FETCH_DATA_TYPES.ACTIVITY_DATA,   ...datetime,   0x00, 0x00])); // [start, type, ..date]
         await new Promise( (resolve, reject) => {
             this.addEventListener('fetch_start', function(e) {
                 resolve(e.detail); // done
@@ -88,14 +89,13 @@ export class activityReader extends EventTarget {
             console.warn("Fetch Ready");
 
             // Save the actual start datetime for the about-to-be-received data
-            // 10 01 01    a6 01 00 00    e6 07 0c 03 12 0c 00   01 00
             var year = convertToInt16Array([...raw.slice(7, 7+2)].reverse())[0]
             var month = raw[9] - 1
             var day = raw[10]
             var hour = raw[11]
-            var minute = raw[12]
+            var minute = raw[12] - (raw[14] * 15) // trailing digit(s?) are an offset of 15 or 16 minutes. This offset was being provided by my manual test call
             var second = raw[13]
-            this.rawStartDate = new Date(year, month, day, hour, minute, second)
+            this.rawStartDate = new Date(Date.UTC(year, month, day, hour, minute, second)) // Watch tracks in UTC
 
             this.dispatchEvent( new CustomEvent('fetch_start', {detail: true}))
             return true;
@@ -120,7 +120,7 @@ export class activityReader extends EventTarget {
     }
 
     async onActivityRead(e) {
-        console.log("sp02reader notified : ACTIVITY");
+        console.log("activityReader notified : ACTIVITY");
 
         var raw = bufferToUint8Array(e.target.value);
 

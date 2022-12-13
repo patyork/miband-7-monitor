@@ -111,14 +111,18 @@ export class Band7 {
             this.batteryReader = new batteryReader(this);
             this.activityReader = new activityReader(this);
 
+            var current_time = bufferToUint8Array( await this.Chars.CURRENT_TIME.readValue() );
+            console.log(current_time);
+            console.log(toHexString(current_time));
+
             // Read sp02 Data
-            //await this.sp02Reader.readSince(new Date());
+            await this.sp02Reader.readSince();
 
             // Read Battery Data
-            //await this.batteryReader.Read();
+            await this.batteryReader.Read();
 
             // Read Activity Data
-            await this.activityReader.readSince(new Date());
+            await this.activityReader.readSince();
 
             // Hook async READ events (Battery, Connection, etc.)
             await this.GATT.startNotifications(this.Chars.CHUNKED_READ, async (e) => this.onChunkedRead(e))

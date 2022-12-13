@@ -1,3 +1,5 @@
+import { convertToInt16Array } from "../tools";
+
 export class BatteryData {
     constructor(rawData) {
         this.rawData = rawData;
@@ -17,13 +19,13 @@ export class BatteryData {
             this.currentLevel = this.rawData[1];
             this.isCharging = this.rawData[2] > 0 ? true : false;
 
-            var year = convertToInt32([...this.rawData.slice(11, 13), 0x00, 0x00].reverse())[0]
+            var year = convertToInt16Array([...this.rawData.slice(11, 13)].reverse())[0]
             var month = this.rawData[13] - 1
             var day = this.rawData[14]
             var hour = this.rawData[15]
             var minute = this.rawData[16]
             var second = this.rawData[17]
-            this.lastChargeTime = new Date(year, month, day, hour, minute, second)
+            this.lastChargeTime = new Date(Date.UTC(year, month, day, hour, minute, second))
         }
         else if( this.rawData.length == 32 ) // Header included
         {

@@ -1,3 +1,8 @@
+Time  
+Dates seem to be TIMEZONE off, plus 16 (or less likely 15) minutes. I think that JS is applying the local timezone, and that the representation of the minute is off by 0x1 : either on the watch or in JS?
+
+
+
 
 On putting watch on:  
 `03 03 00 4a 00 15 00 00 00 29 00 04 0f 22 00 3a 08 02 05 16 1c 10 e0 3a 08 02 05 16 1c 10 e0 00`  
