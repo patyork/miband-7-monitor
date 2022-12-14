@@ -1,14 +1,14 @@
-import { dateAdd } from "../tools";
+import { dateAdd, uniqBy } from "../tools";
 
 export class ActivityData {
     // Construct with Parsed Data
     constructor(parsedData) {
 
         if(parsedData != null) {
-            this.activityHistory = [...parsedData];
+            this.History = [...parsedData];
         }
         else {
-            this.activityHistory = [];
+            this.History = [];
         }
     }
 
@@ -28,6 +28,11 @@ export class ActivityData {
             this.parseMeasurement(date, measurement);
             date = dateAdd(date, 'minute', 1)
         }
+
+        // Dedeuplicate and sort
+        var temp = uniqBy(this.History, JSON.stringify)
+        this.History = [...temp]
+        this.History.sort((a, b) => (a.date > b.date) ? 1 : -1)
     }
 
         /*
@@ -42,7 +47,7 @@ export class ActivityData {
     */
 
     parseMeasurement(date, measurement) {
-        this.activityHistory = this.activityHistory.concat([
+        this.History = this.History.concat([
             {
                 date : date,
                 rawKind : measurement[0],

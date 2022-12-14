@@ -126,3 +126,12 @@ export function arraysEqual(a, b) {
     }
     return true;
   }
+
+// https://stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
+export function uniqBy(a, key) {
+    var seen = {};
+    return a.filter(function (item) {
+        var k = key(item);
+        return seen.hasOwnProperty(k) ? false : (seen[k] = true);
+    })
+}

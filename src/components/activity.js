@@ -19,9 +19,9 @@ export class activityReader extends EventTarget {
             currentBatch: 0,
         }
 
-        this.rawActivityData = new Uint8Array();
+        this.rawActivityData = null;
         this.rawStartDate = null;
-        this.ActivityData = new ActivityData();
+        this.Data = new ActivityData();
         
         
     }
@@ -52,7 +52,7 @@ export class activityReader extends EventTarget {
         });});
 
         // Send Start Command 2: Begin Transfer
-        await x.Chars.FETCH.writeValueWithoutResponse(Uint8Array.from([FETCH_COMMANDS.BEGIN_TRANSFER]));
+        await this.Band.Chars.FETCH.writeValueWithoutResponse(Uint8Array.from([FETCH_COMMANDS.BEGIN_TRANSFER]));
         this.status.fetchStarted = true;
         await new Promise( (resolve, reject) => {
             this.addEventListener('transfer_end', function(e) {
@@ -88,6 +88,9 @@ export class activityReader extends EventTarget {
         {
             console.warn("Fetch Ready");
 
+             // Clear buffer
+             this.rawActivityData = new Uint8Array();
+
             // Save the actual start datetime for the about-to-be-received data
             var year = convertToInt16Array([...raw.slice(7, 7+2)].reverse())[0]
             var month = raw[9] - 1
@@ -97,6 +100,8 @@ export class activityReader extends EventTarget {
             var minute = raw[12] - (raw[14] * 15) // trailing digit(s?) are an offset of 15 or 16 minutes. This offset was being provided by my manual test call
             var second = raw[13]
             this.rawStartDate = new Date(Date.UTC(year, month, day, hour, minute, second)) // Watch tracks in UTC
+
+           
 
             this.dispatchEvent( new CustomEvent('fetch_start', {detail: true}))
             return true;
@@ -108,7 +113,7 @@ export class activityReader extends EventTarget {
 
             // Parse
             console.log("parsing data now..")
-            this.ActivityData.parseData(this.rawActivityData, this.rawStartDate);
+            this.Data.parseData(this.rawActivityData, this.rawStartDate);
 
             this.dispatchEvent( new CustomEvent('transfer_end', {detail: true}));
             
