@@ -52,7 +52,7 @@ export class sp02Reader extends EventTarget {
         });});
 
         // Send Start Command 2: Begin Transfer
-        await x.Chars.FETCH.writeValueWithoutResponse(Uint8Array.from([FETCH_COMMANDS.BEGIN_TRANSFER]));
+        await this.Band.Chars.FETCH.writeValueWithoutResponse(Uint8Array.from([FETCH_COMMANDS.BEGIN_TRANSFER]));
         this.status.fetchStarted = true;
         await new Promise( (resolve, reject) => {
             this.addEventListener('transfer_end', function(e) {

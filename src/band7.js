@@ -40,8 +40,10 @@ export class Band7 {
 
     async init() {
 
+        var service_uuids = Object.values(SERVICE_UUIDS);
         const device = await navigator.bluetooth.requestDevice({
             filters: [{services: [ADVERTISEMENT_SERVICE],},],
+            optionalServices : service_uuids,
         });
 
         this.Device = device
@@ -61,7 +63,6 @@ export class Band7 {
 
         console.log("Initializing Services and Characteristics");
         var service_keys = Object.keys(SERVICE_UUIDS);
-        var service_uuids = Object.values(SERVICE_UUIDS);
         var char_keys = Object.keys(CHAR_UUIDS);
         var char_uuids = Object.values(CHAR_UUIDS);
         

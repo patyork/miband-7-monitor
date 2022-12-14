@@ -1,3 +1,4 @@
+import { convertToInt32Array } from "../tools";
 export class Sp02Data {
     // Construct with Parsed Data
     constructor(parsedData) {
@@ -27,7 +28,7 @@ export class Sp02Data {
     }
 
     parseMeasurement(measurement) {
-        var timestamp = convertToInt32(measurement.slice(0, 0+4).reverse())[0]
+        var timestamp = convertToInt32Array(measurement.slice(0, 0+4).reverse())[0]
         var date = new Date(timestamp * 1000);
         var samples = measurement.slice(4, 4+3);
         var unused = measurement.slice(7);

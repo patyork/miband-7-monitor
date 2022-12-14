@@ -93,6 +93,7 @@ export class activityReader extends EventTarget {
             var month = raw[9] - 1
             var day = raw[10]
             var hour = raw[11]
+            if(raw[14] > 0) {console.warn("Date Offset!")}
             var minute = raw[12] - (raw[14] * 15) // trailing digit(s?) are an offset of 15 or 16 minutes. This offset was being provided by my manual test call
             var second = raw[13]
             this.rawStartDate = new Date(Date.UTC(year, month, day, hour, minute, second)) // Watch tracks in UTC
