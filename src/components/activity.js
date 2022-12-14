@@ -37,12 +37,13 @@ export class activityReader extends EventTarget {
         if(iterationCount == null) {iterationCount = 0}
         this.iterationCount = iterationCount; // store in object for reference in the Event handler
 
-        var self = this
-        self.listenerOnFetch = async (e) => this.onFetchRead(e)
-        self.listenerOnActivity = async (e) => this.onActivityRead(e)
-
         // Hook on zeroth iteration
         if(iterationCount == 0) {
+            var self = this
+            self.listenerOnFetch = async (e) => this.onFetchRead(e)
+            self.listenerOnActivity = async (e) => this.onActivityRead(e)
+
+            console.log("ActivityReader : Hooking")
             await this.Band.GATT.startNotifications(this.Band.Chars.FETCH, self.listenerOnFetch)
             await this.Band.GATT.startNotifications(this.Band.Chars.ACTIVITY_DATA, self.listenerOnActivity)
         }
@@ -67,11 +68,11 @@ export class activityReader extends EventTarget {
         if(iterationCount == 0)
         {
             // Acknowledge Fetch     10 02 01 f3 d3 ba e8 success        10 02 32 00 00 00 00 failure to ack
-            console.log("Done")
 
             // Unhook on resoution of the zeroth iteration
             await this.Band.GATT.stopNotifications(this.Band.Chars.FETCH, self.listenerOnFetch)
             await this.Band.GATT.stopNotifications(this.Band.Chars.ACTIVITY_DATA, self.listenerOnActivity)
+            console.log("ActivityReader -> Done")
         }
         return true;
     }
