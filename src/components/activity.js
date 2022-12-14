@@ -23,10 +23,10 @@ export class activityReader extends EventTarget {
         this.rawStartDate = null;
         this.Data = new ActivityData();
         
-        
+        this.iterationCount = 0;
     }
 
-    async readSince(datetime) {
+    async readSince(datetime, iterationCount) {
         // Preprocess
         if(datetime == null)
         {
@@ -34,14 +34,18 @@ export class activityReader extends EventTarget {
             datetime = dateAdd(datetime, 'hour', -1);
         }
         datetime = dateToUTCWatchDateArray(datetime);
+        if(iterationCount == null) {iterationCount = 0}
+        this.iterationCount = iterationCount; // store in object for reference in the Event handler
 
         var self = this
         self.listenerOnFetch = async (e) => this.onFetchRead(e)
         self.listenerOnActivity = async (e) => this.onActivityRead(e)
 
-        // Hook
-        await this.Band.GATT.startNotifications(this.Band.Chars.FETCH, self.listenerOnFetch)
-        await this.Band.GATT.startNotifications(this.Band.Chars.ACTIVITY_DATA, self.listenerOnActivity)
+        // Hook on zeroth iteration
+        if(iterationCount == 0) {
+            await this.Band.GATT.startNotifications(this.Band.Chars.FETCH, self.listenerOnFetch)
+            await this.Band.GATT.startNotifications(this.Band.Chars.ACTIVITY_DATA, self.listenerOnActivity)
+        }
 
         // Send Start Command 1: Type and Data Type   failure: 10 01 32, timeout    ready: 10 01 01
         await this.Band.Chars.FETCH.writeValueWithoutResponse(
@@ -55,16 +59,21 @@ export class activityReader extends EventTarget {
         await this.Band.Chars.FETCH.writeValueWithoutResponse(Uint8Array.from([FETCH_COMMANDS.BEGIN_TRANSFER]));
         this.status.fetchStarted = true;
         await new Promise( (resolve, reject) => {
-            this.addEventListener('transfer_end', function(e) {
+            this.addEventListener('transfer_end'+iterationCount, function(e) {
+                console.log("event : " + 'transfer_end'+iterationCount)
                 resolve(e.detail); // done
         });});
 
-        // Acknowledge Fetch     10 02 01 f3 d3 ba e8 success        10 02 32 00 00 00 00 failure to ack
-        console.log("Done")
+        if(iterationCount == 0)
+        {
+            // Acknowledge Fetch     10 02 01 f3 d3 ba e8 success        10 02 32 00 00 00 00 failure to ack
+            console.log("Done")
 
-        // Unhook
-        await this.Band.GATT.stopNotifications(this.Band.Chars.FETCH, self.listenerOnFetch)
-        await this.Band.GATT.stopNotifications(this.Band.Chars.ACTIVITY_DATA, self.listenerOnActivity)
+            // Unhook on resoution of the zeroth iteration
+            await this.Band.GATT.stopNotifications(this.Band.Chars.FETCH, self.listenerOnFetch)
+            await this.Band.GATT.stopNotifications(this.Band.Chars.ACTIVITY_DATA, self.listenerOnActivity)
+        }
+        return true;
     }
 
     async onFetchRead(e) {
@@ -76,7 +85,7 @@ export class activityReader extends EventTarget {
 
         var raw = bufferToUint8Array(e.target.value);
         console.log("activityReader notified : FETCH");
-        console.log(raw);
+        //console.log(raw);
 
         /*if(arraysEqual( raw, new Uint8Array([0x10, 0x01, 0x32] )))
         {
@@ -117,24 +126,22 @@ export class activityReader extends EventTarget {
             this.Data.parseData(this.rawActivityData, this.rawStartDate);
 
             // Check for additional data
+            var iterationCount = this.iterationCount; // store a copy for use after recursion
             var recordCount = this.rawActivityData.length / 8;
             var nextTimestep = dateAdd(this.rawStartDate, 'minute', recordCount)
             if(nextTimestep < new Date())
             {
+                
                 console.log("Additional Data from: " + nextTimestep)
-                await this.readSince(nextTimestep)
+                await this.readSince(nextTimestep, iterationCount+1) // recurse
             }
             else {
                 console.log("All data read")
             }
-
-            this.dispatchEvent( new CustomEvent('transfer_end', {detail: true}));
             
-            
-            // Unhook
-            //await this.Band.GATT.stopNotifications(this.Band.Chars.FETCH, this.onFetchRead)
-            //await this.Band.GATT.stopNotifications(this.Band.Chars.ACTIVITY_DATA, this.onActivityRead)
-            
+            // Dispatch that we are done with this Fetch
+            console.log("Sending event : " + 'transfer_end'+iterationCount)
+            this.dispatchEvent( new CustomEvent('transfer_end'+iterationCount, {detail: true}));
         }
 
     }
