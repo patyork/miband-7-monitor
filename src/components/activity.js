@@ -74,9 +74,10 @@ export class activityReader extends EventTarget {
         //                    10 01 01 b1 2c 00 00 e6 07 0c 03 12 28 1e 01 00
         //                    10 01 01 b1 2c 00 00 e6 07 0c 03 12 28 1e 01 00
 
-        console.log("activityReader notified : FETCH");
-
         var raw = bufferToUint8Array(e.target.value);
+        console.log("activityReader notified : FETCH");
+        console.log(raw);
+
         /*if(arraysEqual( raw, new Uint8Array([0x10, 0x01, 0x32] )))
         {
             console.error("Timeout in Fetch");
@@ -115,7 +116,20 @@ export class activityReader extends EventTarget {
             console.log("parsing data now..")
             this.Data.parseData(this.rawActivityData, this.rawStartDate);
 
+            // Check for additional data
+            var recordCount = this.rawActivityData.length / 8;
+            var nextTimestep = dateAdd(this.rawStartDate, 'minute', recordCount)
+            if(nextTimestep < new Date())
+            {
+                console.log("Additional Data from: " + nextTimestep)
+                await this.readSince(nextTimestep)
+            }
+            else {
+                console.log("All data read")
+            }
+
             this.dispatchEvent( new CustomEvent('transfer_end', {detail: true}));
+            
             
             // Unhook
             //await this.Band.GATT.stopNotifications(this.Band.Chars.FETCH, this.onFetchRead)
