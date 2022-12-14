@@ -1,5 +1,4 @@
 import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES } from "../constants.js";
-import '../aes.js'
 
 export class Authenticator extends EventTarget {
     constructor(band) {
