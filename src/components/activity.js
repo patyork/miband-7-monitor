@@ -65,11 +65,9 @@ export class activityReader extends EventTarget {
                 resolve(e.detail); // done
         });});
 
+        // Unhook on resoution of the zeroth iteration
         if(iterationCount == 0)
         {
-            // Acknowledge Fetch     10 02 01 f3 d3 ba e8 success        10 02 32 00 00 00 00 failure to ack
-
-            // Unhook on resoution of the zeroth iteration
             await this.Band.GATT.stopNotifications(this.Band.Chars.FETCH, self.listenerOnFetch)
             await this.Band.GATT.stopNotifications(this.Band.Chars.ACTIVITY_DATA, self.listenerOnActivity)
             console.log("ActivityReader -> Done")
@@ -112,14 +110,13 @@ export class activityReader extends EventTarget {
             var second = raw[13]
             this.rawStartDate = new Date(Date.UTC(year, month, day, hour, minute, second)) // Watch tracks in UTC
 
-           
-
             this.dispatchEvent( new CustomEvent('fetch_start', {detail: true}))
             return true;
         }
         // Done, Success
         else if(arraysEqual( raw.slice(0,3), new Uint8Array([0x10, 0x02, 0x01])))
         {
+            // Acknowledge Fetch     10 02 01 f3 d3 ba e8 success        10 02 32 00 00 00 00 failure to ack
             await this.Band.Chars.FETCH.writeValueWithoutResponse(Uint8Array.from([0x03, 0x09])) //HuamiService.COMMAND_ACK_ACTIVITY_DATA, ackByte 09 to keep, 01 to delete from device
 
             // Parse
@@ -132,7 +129,6 @@ export class activityReader extends EventTarget {
             var nextTimestep = dateAdd(this.rawStartDate, 'minute', recordCount)
             if(nextTimestep < new Date())
             {
-                
                 console.log("Additional Data from: " + nextTimestep)
                 await this.readSince(nextTimestep, iterationCount+1) // recurse
             }
