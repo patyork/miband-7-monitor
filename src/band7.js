@@ -92,7 +92,7 @@ export class Band7 {
         }));
         console.log("Services and CharacteristicsInitialized");
 
-
+        /*
         console.log("Initializing Logging Events (Bluetooth 'notifications')");
         await Object.keys(this.Chars).map(async (char_name) => {
             if (this.Chars[char_name].properties.notify)
@@ -101,6 +101,7 @@ export class Band7 {
             }
         });
         console.log("Logging Events (Bluetooth 'notifications') Initializing");
+        */
 
         this.isAuthenticated = await this.Auth.authenticate();
 
@@ -116,14 +117,14 @@ export class Band7 {
             console.log(current_time);
             console.log(toHexString(current_time));
 
-            // Read sp02 Data
-            await this.sp02Reader.readSince();
-
             // Read Battery Data
             await this.batteryReader.Read();
 
+            // Read sp02 Data
+            //await this.sp02Reader.readSince();
+
             // Read Activity Data
-            await this.activityReader.readSince();
+            //await this.activityReader.readSince();
 
             // Hook async READ events (Battery, Connection, etc.)
             await this.GATT.startNotifications(this.Chars.CHUNKED_READ, async (e) => this.onChunkedRead(e))
@@ -150,30 +151,13 @@ export class Band7 {
             console.log(data);
             console.log(data.toString());
             var sequenceNumber = data[0]
-            /*data = data.slice(1) // remove batch counter
-            var stride = 65;  //8 for activity 0x01, 65 for sp02
-            for(let i=0; i<data.length-1;  i+=stride)
-            {
-                var message = "";
-                if(data[i] != 0) { console.log('Version or Data Type?: ' + data[i])}
-
-                console.log(data.slice(i+1, i+5).reverse());
-
-                var timestamp = convertToInt32(data.slice(i+1, i+5).reverse())[0]
-                var date = new Date(timestamp * 1000);
-
-                for(let j=0; j<stride; j+=1)
-                {
-                    message += data[i+j] + ", "
-                }
-                console.log(date + " : " + message)
-                //console.log(data[i]+", "+data[i+1]+", "+data[i+2]+", "+data[i+3]+", "+data[i+4]+", "+data[i+5]+", "+data[i+6]+", "+data[i+7])
-            }
-            */
         }
         
         console.log("==========")
     }
+
+    // Hook for Chunked Read
+    // Intermittent data like Connection status, battery, etc, comes through this event.
     async onChunkedRead(e) {
         console.log(" Main : CHUNK_READ")
         var raw = bufferToUint8Array(e.target.value);
@@ -200,7 +184,7 @@ export class Band7 {
     async writeChunkedValueFlags(char, type, handle, data, base_flags) {
         //console.log("writing " + handle)
         //console.log(data)
-        console.log(base_flags)
+        //console.log(base_flags)
 
         let remaining = data.length;
         let count = 0;
@@ -213,7 +197,7 @@ export class Band7 {
             const chunk = new Uint8Array(copybytes + header_size);
 
             let flags = base_flags;
-            console.log("loop: " + flags)
+            //console.log("loop: " + flags)
 
             if (count == 0) {
                 let i = 5;

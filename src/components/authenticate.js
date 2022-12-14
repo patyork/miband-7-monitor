@@ -92,7 +92,6 @@ export class Authenticator extends EventTarget {
                 value[12] == 0x04 &&
                 value[13] == 0x01
             ) {
-                console.log("A");
                 this.reassembleBuffer_pointer = 0;
                 headerSize = 14;
                 this.reassembleBuffer_expectedBytes = value[5] - 3;

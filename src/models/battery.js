@@ -25,7 +25,8 @@ export class BatteryData {
             var hour = this.rawData[15]
             var minute = this.rawData[16]
             var second = this.rawData[17]
-            this.lastChargeTime = new Date(Date.UTC(year, month, day, hour, minute, second))
+            //this.lastChargeTime = new Date(Date.UTC(year, month, day, hour, minute, second)) // Battery data is not UTC?
+            this.lastChargeTime = new Date(year, month, day, hour, minute, second)
         }
         else if( this.rawData.length == 32 ) // Header included
         {
