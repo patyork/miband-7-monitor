@@ -11,7 +11,7 @@
 
 <body>
     <div>Top
-        <div><button>Test</button></div>
+        <div><button id="load_all">Load All Data</button></div>
     </div>
     <div id="vitalsChart"></div>
     <div id="sleepChart"></div>
@@ -45,6 +45,7 @@
         window.vitalsChart = vitalsChart;
         const sleepChart = new SleepChart("#sleepChart");
         window.sleepChart = sleepChart;
+        const loadButton = document.querySelector("#load_all");
 
         const container = document.querySelector("#container");
         const hr = document.querySelector("#hr");
@@ -56,6 +57,74 @@
         if (authKey) {
             keyInput.value = authKey;
         }
+
+        async function loadSpo2Data(since) {
+            await window.miband.sp02Reader.readSince(since)
+            var sp02 = window.miband.sp02Reader.Data.History
+            var data = sp02.map((element) => { return { x: element.date, y: element.average } })
+
+            // Fill nulls and sort
+            var gapInMinutes = 30
+            var dataLength = data.length
+            for (var i = 0; i <  dataLength- 1; i += 1) {
+                if ((data[i+1].x - data[i].x)/1000/60 > gapInMinutes) {
+                    data.push({x: new Date(data[i].x-0 + gapInMinutes*60*1000), y: null})
+                }
+            }
+            data.sort((a, b) => (a.x > b.x) ? 1 : -1)
+            return data;
+        }
+
+
+        async function loadActivityData(since) {
+            await window.miband.activityReader.readSince(since)
+            var activity = window.miband.activityReader.Data.History
+
+            /// Heart Rate
+            var data = activity.map((element) => { return { x: element.date, y: element.heartRate } })
+
+            // Flip 255 -> null and sort
+            for (var i = 0; i <  data.length; i += 1) {
+                if(data[i].y == 255) {data[i].y = null}
+            }
+            data.sort((a, b) => (a.x > b.x) ? 1 : -1)
+
+            /// Sleep Chart
+            var data1 = activity.map((element) => { return { x: element.date, y: element.rawKind } })
+            var data2 = activity.map((element) => { return { x: element.date, y: element.sleep } })
+            var data3 = activity.map((element) => { return { x: element.date, y: element.deepSleep } })
+            var data4 = activity.map((element) => { return { x: element.date, y: element.remSleep } })
+            var data5 = activity.map((element) => { return { x: element.date, y: element.rawIntensity } })
+            var data6 = activity.map((element) => { return { x: element.date, y: element.steps } })
+            var data7 = activity.map((element) => { return { x: element.date, y: element.unknown1 } })
+            
+            return [data, data1, data2, data3, data4, data5, data6, data7]
+        }
+
+        loadButton.addEventListener("click", async () => {
+            if(window.miband != null) {
+                var since = new Date(now-0 - 31*24*60*60*1000); // 31 Days
+
+                //// Sp02
+                var data = await loadSpo2Data(since);
+                var now = new Date()
+                vitalsChart.seto2(data)
+                vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+
+                //// Activity
+                var temp = await loadActivityData(since);
+                var hr = temp[0];
+                var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7];
+
+                vitalsChart.sethr(hr)
+                vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+
+                /// Sleep Chart
+                sleepChart.set(data1, data2, data3, data4, data5, data6, data7)
+                sleepChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+
+            }
+        });
 
         connectButton.addEventListener("click", async () => {
             authKey = keyInput.value;
@@ -86,46 +155,23 @@
 
 
                 //// Sp02
-                await window.miband.sp02Reader.readSince(since)
-                sp02 = window.miband.sp02Reader.Sp02Data.sp02History
-                data = sp02.map((element) => { return { x: element.date, y: element.average } })
-
-                // Fill nulls and sort
-                var gapInMinutes = 30
-                var dataLength = data.length
-                for (var i = 0; i <  dataLength- 1; i += 1) {
-                    if ((data[i+1].x - data[i].x)/1000/60 > gapInMinutes) {
-                        data.push({x: new Date(data[i].x-0 + gapInMinutes*60*1000), y: null})
-                    }
-                }
-                data.sort((a, b) => (a.x > b.x) ? 1 : -1)
+                var data = await loadSpo2Data(since);
                 vitalsChart.seto2(data)
                 vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
 
 
                 //// Activity
-                await window.miband.activityReader.readSince(since)
-                activity = window.miband.activityReader.Data.History
+                var temp = await loadActivityData(since);
+                var hr = temp[0];
+                var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7];
+                console.log(temp);
+                console.log(hr);
+                console.log(data1);
 
-                /// Heart Rate
-                data = activity.map((element) => { return { x: element.date, y: element.heartRate } })
-
-                // Flip 255 -> null and sort
-                for (var i = 0; i <  data.length; i += 1) {
-                    if(data[i].y == 255) {data[i].y = null}
-                }
-                data.sort((a, b) => (a.x > b.x) ? 1 : -1)
-                vitalsChart.sethr(data)
+                vitalsChart.sethr(hr)
                 vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
 
                 /// Sleep Chart
-                data1 = activity.map((element) => { return { x: element.date, y: element.rawKind } })
-                data2 = activity.map((element) => { return { x: element.date, y: element.sleep } })
-                data3 = activity.map((element) => { return { x: element.date, y: element.deepSleep } })
-                data4 = activity.map((element) => { return { x: element.date, y: element.remSleep } })
-                data5 = activity.map((element) => { return { x: element.date, y: element.rawIntensity } })
-                data6 = activity.map((element) => { return { x: element.date, y: element.steps } })
-                data7 = activity.map((element) => { return { x: element.date, y: element.unknown1 } })
                 sleepChart.set(data1, data2, data3, data4, data5, data6, data7)
                 sleepChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
                 

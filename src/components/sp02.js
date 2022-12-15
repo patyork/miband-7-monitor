@@ -21,7 +21,7 @@ export class sp02Reader extends EventTarget {
         }
 
         this.rawSp02Data = new Uint8Array();
-        this.Sp02Data = new Sp02Data();
+        this.Data = new Sp02Data();
         
         
     }
@@ -97,7 +97,7 @@ export class sp02Reader extends EventTarget {
 
             // Parse
             console.log("parsing data now..")
-            this.Sp02Data.parseData(this.rawSp02Data);
+            this.Data.parseData(this.rawSp02Data);
 
             this.dispatchEvent( new CustomEvent('transfer_end', {detail: true}));
             
