@@ -1,5 +1,5 @@
 import { ADVERTISEMENT_SERVICE, CHAR_UUIDS, SERVICE_UUIDS, CHUNK_ENDPOINTS, CHUNK_COMMANDS, FETCH_COMMANDS, FETCH_DATA_TYPES, CHUNK_RESPONSES } from "./constants.js";
-import { toHexString, bufferToUint8Array, invertDictionary, arraysEqual, convertToInt16Array } from "./tools.js";
+import { toHexString, bufferToUint8Array, invertDictionary, arraysEqual, convertToInt16Array, dateAdd } from "./tools.js";
 
 import { Authenticator } from "./components/authenticate.js";
 import { sp02Reader } from "./components/sp02.js";
@@ -109,9 +109,14 @@ export class Band7 {
         if(this.isAuthenticated) {
             console.log("Auth'd");
 
+            window.dispatchEvent( new CustomEvent('event_connected', {detail: true}))
+
             this.sp02Reader = new sp02Reader(this);
             this.batteryReader = new batteryReader(this);
             this.activityReader = new activityReader(this);
+
+            var datetime = new Date();
+            datetime = dateAdd(datetime, 'hours', -12);
 
             var current_time = bufferToUint8Array( await this.Chars.CURRENT_TIME.readValue() );
             console.log(current_time);
@@ -121,10 +126,10 @@ export class Band7 {
             await this.batteryReader.Read();
 
             // Read sp02 Data
-            //await this.sp02Reader.readSince();
+            //await this.sp02Reader.readSince(datetime);
 
             // Read Activity Data
-            //await this.activityReader.readSince();
+            //await this.activityReader.readSince(datetime);
 
             // Hook async READ events (Battery, Connection, etc.)
             await this.GATT.startNotifications(this.Chars.CHUNKED_READ, async (e) => this.onChunkedRead(e))

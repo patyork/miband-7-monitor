@@ -1,13 +1,13 @@
-import { convertToInt32Array } from "../tools";
+import { convertToInt32Array, uniqBy } from "../tools";
 export class Sp02Data {
     // Construct with Parsed Data
     constructor(parsedData) {
 
         if(parsedData != null) {
-            this.sp02History = [...parsedData];
+            this.History = [...parsedData];
         }
         else {
-            this.sp02History = [];
+            this.History = [];
         }
     }
 
@@ -25,6 +25,11 @@ export class Sp02Data {
 
                 this.parseMeasurement(measurement);
             }
+        
+        // Dedeuplicate and sort
+        var temp = uniqBy(this.History, JSON.stringify)
+        this.History = [...temp]
+        this.History.sort((a, b) => (a.date > b.date) ? 1 : -1)
     }
 
     parseMeasurement(measurement) {
@@ -46,7 +51,7 @@ export class Sp02Data {
     addMeasurementToHistory(date, samples) {
         // One Measurement contains 3? samples, last one can be zero if the measurement wasn't perfect (movement, etc)
         var nonzero_samples = samples.filter(val => val != 0)
-        this.sp02History = this.sp02History.concat([
+        this.History = this.History.concat([
             {
                 date : date,
                 samples : samples,
