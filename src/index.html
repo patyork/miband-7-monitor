@@ -1,79 +1,141 @@
 <html>
-  <head>
+
+<head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
-    />
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Band 7 Monitor</title>
     <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div id="chart"></div>
+</head>
+
+<body>
+    <div>Top
+        <div><button>Test</button></div>
+    </div>
+    <div id="vitalsChart"></div>
+    <div id="sleepChart"></div>
     <div id="container">
-      <div class="init">
-        <div class="form-group">
-          <label for="auth-key"
-            >Auth key
-            <a
-              target="_blank"
-              href="https://codeberg.org/Freeyourgadget/Gadgetbridge/wiki/Huami-Server-Pairing"
-              >what is this?</a
-            >
-          </label>
+        <div class="init">
+            <div class="form-group">
+                <label for="auth-key">Auth key
+                    <a target="_blank"
+                        href="https://codeberg.org/Freeyourgadget/Gadgetbridge/wiki/Huami-Server-Pairing">what is
+                        this?</a>
+                </label>
+            </div>
+            <div class="form-group">
+                <input type="text" id="auth-key" placeholder="94359d5b8b092e1286a43cfb62ee7923" />
+            </div>
+            <div class="form-group">
+                <button id="connect-button">Connect</button>
+            </div>
         </div>
-        <div class="form-group">
-          <input
-            type="text"
-            id="auth-key"
-            placeholder="94359d5b8b092e1286a43cfb62ee7923"
-          />
+        <div class="hr d-none">
+            <h1 id="heartrate">
+                <span id="hr">-</span><span class="unit"></span>
+            </h1>
         </div>
-        <div class="form-group">
-          <button id="connect-button">Connect</button>
-        </div>
-      </div>
-      <div class="hr d-none">
-        <h1 id="heartrate">
-          <span id="hr">-</span><span class="unit"></span>
-        </h1>
-      </div>
     </div>
     <script src="ecdh.js"></script>
     <script src="aes.js"></script>
     <script src="bundle.js"></script>
     <script>
-      const chart = new Chart("#chart");
-      const hr = document.querySelector("#hr");
-      const connectButton = document.querySelector("#connect-button");
-      const keyInput = document.querySelector("#auth-key");
-      const initBox = document.querySelector(".init");
-      const hrBox = document.querySelector(".hr");
-      let authKey = localStorage.getItem("auth-key");
-      if (authKey) {
-        keyInput.value = authKey;
-      }
+        const vitalsChart = new VitalsChart("#vitalsChart");
+        window.vitalsChart = vitalsChart;
+        const sleepChart = new SleepChart("#sleepChart");
+        window.sleepChart = sleepChart;
 
-      connectButton.addEventListener("click", async () => {
-        authKey = keyInput.value;
-        window.addEventListener("connected", (e) => {
-          initBox.classList.add("d-none");
-          hrBox.classList.remove("d-none");
-          localStorage.setItem("auth-key", authKey);
-        });
-        window.addEventListener("heartrate", (e) => {
-          console.log("Got heartrate", e.detail);
-          hr.innerText = e.detail;
-          chart.update(e.detail);
-        });
-        try {
-          window.miband = new Band7(authKey);
-          await window.miband.init();
-        } catch (e) {
-          alert(e.message);
+        const container = document.querySelector("#container");
+        const hr = document.querySelector("#hr");
+        const connectButton = document.querySelector("#connect-button");
+        const keyInput = document.querySelector("#auth-key");
+        const initBox = document.querySelector(".init");
+        const hrBox = document.querySelector(".hr");
+        let authKey = localStorage.getItem("auth-key");
+        if (authKey) {
+            keyInput.value = authKey;
         }
-      });
+
+        connectButton.addEventListener("click", async () => {
+            authKey = keyInput.value;
+            window.addEventListener("event_connected", (e) => {
+                container.classList.add("d-none");
+                initBox.classList.add("d-none");
+                hrBox.classList.add("d-none");
+                localStorage.setItem("auth-key", authKey);
+            });
+
+            window.addEventListener("heartrate", (e) => {
+                console.log("Got heartrate", e.detail);
+                hr.innerText = e.detail;
+                vitalsChart.update(e.detail);
+            });
+
+            try {
+                window.miband = new Band7(authKey);
+
+                //// Initialize
+                var now = new Date()
+                var timeFrame = 12; // hours
+                var since = new Date(now-0 - timeFrame*60*60*1000)
+                await window.miband.init();
+
+                //// Zoom
+                vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+
+
+                //// Sp02
+                await window.miband.sp02Reader.readSince(since)
+                sp02 = window.miband.sp02Reader.Sp02Data.sp02History
+                data = sp02.map((element) => { return { x: element.date, y: element.average } })
+
+                // Fill nulls and sort
+                var gapInMinutes = 30
+                var dataLength = data.length
+                for (var i = 0; i <  dataLength- 1; i += 1) {
+                    if ((data[i+1].x - data[i].x)/1000/60 > gapInMinutes) {
+                        data.push({x: new Date(data[i].x-0 + gapInMinutes*60*1000), y: null})
+                    }
+                }
+                data.sort((a, b) => (a.x > b.x) ? 1 : -1)
+                vitalsChart.seto2(data)
+                vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+
+
+                //// Activity
+                await window.miband.activityReader.readSince(since)
+                activity = window.miband.activityReader.Data.History
+
+                /// Heart Rate
+                data = activity.map((element) => { return { x: element.date, y: element.heartRate } })
+
+                // Flip 255 -> null and sort
+                for (var i = 0; i <  data.length; i += 1) {
+                    if(data[i].y == 255) {data[i].y = null}
+                }
+                data.sort((a, b) => (a.x > b.x) ? 1 : -1)
+                vitalsChart.sethr(data)
+                vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+
+                /// Sleep Chart
+                data1 = activity.map((element) => { return { x: element.date, y: element.rawKind } })
+                data2 = activity.map((element) => { return { x: element.date, y: element.sleep } })
+                data3 = activity.map((element) => { return { x: element.date, y: element.deepSleep } })
+                data4 = activity.map((element) => { return { x: element.date, y: element.remSleep } })
+                data5 = activity.map((element) => { return { x: element.date, y: element.rawIntensity } })
+                data6 = activity.map((element) => { return { x: element.date, y: element.steps } })
+                data7 = activity.map((element) => { return { x: element.date, y: element.unknown1 } })
+                sleepChart.set(data1, data2, data3, data4, data5, data6, data7)
+                sleepChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+                
+
+            } catch (e) {
+                //alert(e.message);
+                console.log(e)
+            }
+        });
     </script>
-  </body>
+</body>
+
 </html>

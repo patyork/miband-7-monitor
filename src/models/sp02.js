@@ -1,4 +1,4 @@
-import { convertToInt32Array } from "../tools";
+import { convertToInt32Array, uniqBy } from "../tools";
 export class Sp02Data {
     // Construct with Parsed Data
     constructor(parsedData) {
@@ -25,6 +25,11 @@ export class Sp02Data {
 
                 this.parseMeasurement(measurement);
             }
+        
+        // Dedeuplicate and sort
+        var temp = uniqBy(this.sp02History, JSON.stringify)
+        this.sp02History = [...temp]
+        this.sp02History.sort((a, b) => (a.date > b.date) ? 1 : -1)
     }
 
     parseMeasurement(measurement) {
