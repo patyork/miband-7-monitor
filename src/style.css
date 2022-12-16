@@ -27,7 +27,13 @@ button:hover {
   background: #eee;
 }
 
+#topbar {
+    display: flex;
+  align-items: left;
+}
+
 #container {
+    background-color: #c1c1c1d0;
   color: #eee;
   display: flex;
   justify-content: center;

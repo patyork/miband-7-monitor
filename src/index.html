@@ -10,11 +10,13 @@
 </head>
 
 <body>
-    <div>Top
+    <div id="topbar">
+        <div><button id="settings">Settings</button></div>
         <div><button id="load_all">Load All Data</button></div>
     </div>
     <div id="vitalsChart"></div>
     <div id="sleepChart"></div>
+    <div></div>
     <div id="container">
         <div class="init">
             <div class="form-group">
@@ -50,6 +52,7 @@
         const container = document.querySelector("#container");
         const hr = document.querySelector("#hr");
         const connectButton = document.querySelector("#connect-button");
+        const settingsButton = document.querySelector("#settings");
         const keyInput = document.querySelector("#auth-key");
         const initBox = document.querySelector(".init");
         const hrBox = document.querySelector(".hr");
@@ -104,12 +107,14 @@
         loadButton.addEventListener("click", async () => {
             if(window.miband != null) {
                 var since = new Date(now-0 - 31*24*60*60*1000); // 31 Days
+                var timeFrame = 24; // hours
 
                 //// Sp02
                 var data = await loadSpo2Data(since);
                 var now = new Date()
                 vitalsChart.seto2(data)
-                vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+                //var firstSample = data[0].x
+                vitalsChart.chart.zoomX(new Date(now-0 - timeFrame*60*60*1000).getTime(), now.getTime()); // Zoom
 
                 //// Activity
                 var temp = await loadActivityData(since);
@@ -117,17 +122,27 @@
                 var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7];
 
                 vitalsChart.sethr(hr)
-                vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+                firstSample = hr[0].x
+                vitalsChart.chart.zoomX(new Date(now-0 - timeFrame*60*60*1000).getTime(), now.getTime()); // Zoom
 
                 /// Sleep Chart
                 sleepChart.set(data1, data2, data3, data4, data5, data6, data7)
-                sleepChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+                firstSample = data1[0].x
+                sleepChart.chart.zoomX(new Date(now-0 - timeFrame*60*60*1000).getTime(), now.getTime()); // Zoom
 
             }
         });
 
+        settingsButton.addEventListener("click", async () => {
+            container.classList.remove("d-none");
+            initBox.classList.remove("d-none");
+        });
+
         connectButton.addEventListener("click", async () => {
             authKey = keyInput.value;
+
+            if(window.miband && window.miband.GATT.connected) {await window.miband.GATT.disconnect();}
+
             window.addEventListener("event_connected", (e) => {
                 container.classList.add("d-none");
                 initBox.classList.add("d-none");
@@ -146,7 +161,7 @@
 
                 //// Initialize
                 var now = new Date()
-                var timeFrame = 12; // hours
+                var timeFrame = 24; // hours
                 var since = new Date(now-0 - timeFrame*60*60*1000)
                 await window.miband.init();
 
@@ -164,9 +179,6 @@
                 var temp = await loadActivityData(since);
                 var hr = temp[0];
                 var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7];
-                console.log(temp);
-                console.log(hr);
-                console.log(data1);
 
                 vitalsChart.sethr(hr)
                 vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
