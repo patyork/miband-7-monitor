@@ -66,6 +66,28 @@
             var sp02 = window.miband.sp02Reader.Data.History
             var data = sp02.map((element) => { return { x: element.date, y: element.average } })
 
+            return processSpo2Data(data);
+        }
+
+        async function loadRecentSpo2Data() {
+            var newest = window.miband.sp02Reader.Data.NewestDate
+            if(newest)
+            {
+                
+                console.log("looking for new data");
+                await window.miband.sp02Reader.readSince(newest);
+                if(window.miband.sp02Reader.Data.Since.length == 0) console.log("no new data");
+                var sp02 = window.miband.sp02Reader.Data.History
+                var data = sp02.map((element) => { return { x: element.date, y: element.average } })
+
+                var processed =  processSpo2Data(data);
+
+                vitalsChart.seto2(processed)
+                //vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+            }
+        }
+
+        function processSpo2Data(data) {
             // Fill nulls and sort
             var gapInMinutes = 30
             var dataLength = data.length
@@ -103,6 +125,8 @@
             
             return [data, data1, data2, data3, data4, data5, data6, data7]
         }
+
+        
 
         loadButton.addEventListener("click", async () => {
             if(window.miband != null) {
@@ -187,6 +211,9 @@
                 activityChart.set(data1, data2, data3, data4, data5, data6, data7)
                 activityChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
                 
+
+                //// Interval for new Data
+                window.setInterval(loadRecentSpo2Data, 61*1000); // Todo: store and cancel in certain circumstances
 
             } catch (e) {
                 //alert(e.message);

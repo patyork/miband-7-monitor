@@ -86,6 +86,9 @@ export class sp02Reader extends EventTarget {
         // Ready for Send command
         else */if(arraysEqual( raw.slice(0,3), new Uint8Array([0x10, 0x01, 0x01]))) // Ready
         {
+            // Clear buffer
+            this.rawSp02Data = new Uint8Array();
+
             console.warn("Fetch Ready");
             this.dispatchEvent( new CustomEvent('fetch_start', {detail: true}))
             return true;

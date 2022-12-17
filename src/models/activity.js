@@ -10,6 +10,8 @@ export class ActivityData {
         else {
             this.History = [];
         }
+        this.Since = []; // Holds the most recent set of data parsed
+        this.NewestDate = null; // Date of the newest record
     }
 
     parseData(rawData, rawStartDate) {
@@ -30,9 +32,11 @@ export class ActivityData {
         }
 
         // Dedeuplicate and sort
-        var temp = uniqBy(this.History, JSON.stringify)
-        this.History = [...temp]
+        this.Since = uniqBy(this.History, JSON.stringify)
+        this.Since.sort((a, b) => (a.date > b.date) ? 1 : -1)
+        this.History = [...this.Since]
         this.History.sort((a, b) => (a.date > b.date) ? 1 : -1)
+        if(this.History.length > 0) this.NewestDate = this.History[this.History.length-1].date;
     }
 
         /*
