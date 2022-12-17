@@ -8,8 +8,10 @@ export class VitalsChart {
         this.o2 = [];
         const options = {
             chart: {
+                id:'vitals',
+                group: 'sync',
                 type: "line",
-                height: "47%",
+                height: "46%",
                 animations: {
                     enabled: false,
                 },
@@ -38,13 +40,18 @@ export class VitalsChart {
             dataLabels: {
                 enabled: false
             },
-            colors: ["#14ff3d", "#ff143d"],
+            legend : {
+                labels: {
+                    useSeriesColors : true,
+                },
+            },
+            colors: ["#14ff3d", "#1495ff"],
             markers: {
                 size: 0,
             },
             stroke: {
                 curve: "smooth",
-                width : 4,
+                width : 3,
             },
             tooltip: {
                 enabled: true,
@@ -58,29 +65,42 @@ export class VitalsChart {
                 labels: {
                     format : "M/d h:mmtt",
                     datetimeUTC: false,
+                    style : {
+                        colors: "#ffffff",
+                    },
                 },
             },
             yaxis: [
-                {
-                    opposite : true,
-                    min: 60,
-                    max: 100,
-                    labels: {
-                        "formatter": function (val) {
-                            return val.toFixed(1)
-                        }
-                    }
-                },
                 {
                     min: 40,
                     //max: 180,
                     labels: {
                         "formatter": function (val) {
                             return val.toFixed(0)
-                        }
+                        },
+                        style : {
+                            colors: "#ffffff"
+                        },
+                        minWidth: 40,
                     }
                 },
             ],
+            annotations: {
+                yaxis: [
+                  {
+                    y: 92,
+                    y2: 100,
+                    borderColor: '#79ff8fd8',
+                    fillColor: '#79ff8fd8',
+                  },
+                  {
+                    y: 55,
+                    y2: 92,
+                    borderColor: '#66baffd7',
+                    fillColor: '#66baffd7',
+                  },
+                ]
+              },
             series: [
                 {
                     name : "Oxygen %",
@@ -151,7 +171,7 @@ export class VitalsChart {
     }
 }
 
-export class SleepChart {
+export class ActivityChart {
     constructor(selector) {
         this.kind = [];
         this.sleep = [];
@@ -162,6 +182,8 @@ export class SleepChart {
         this.unk = [];
         const options = {
             chart: {
+                id:'activity',
+                group: 'sync',
                 type: "line",
                 height: "47%",
                 animations: {
@@ -192,7 +214,12 @@ export class SleepChart {
             dataLabels: {
                 enabled: false
             },
-            colors: ["#14ff3d", "#ff143d", "#cccfff", "#fffccc", "#141414", "#414141"],
+            legend : {
+                labels: {
+                    useSeriesColors : true,
+                },
+            },
+            colors: ["#14ff3d", "#ff143d", "#cccfff", "#fffccc", "#141414", "#b4abab", "#a84dc4"],
             markers: {
                 size: 0,
             },
@@ -212,29 +239,23 @@ export class SleepChart {
                 labels: {
                     format : "M/d h:mmtt",
                     datetimeUTC: false,
+                    style : {
+                        colors: "#ffffff",
+                    },
                 },
             },
-            /*yaxis: [
+            yaxis: [
                 {
-                    opposite : true,
-                    min: 60,
-                    max: 100,
+                    
                     labels: {
-                        "formatter": function (val) {
-                            return val.toFixed(0)
-                        }
+                        style : {
+                            colors: "#ffffff",
+                        },
+                        
+                        minWidth: 40,
                     }
-                },
-                {
-                    min: 40,
-                    //max: 180,
-                    labels: {
-                        "formatter": function (val) {
-                            return val.toFixed(0)
-                        }
-                    }
-                },
-            ],*/
+                }
+            ],
             series: [
                 {
                     name : "Kind",
@@ -314,4 +335,4 @@ export class SleepChart {
 }
 
 window.VitalsChart = VitalsChart;
-window.SleepChart = SleepChart;
+window.ActivityChart = ActivityChart;

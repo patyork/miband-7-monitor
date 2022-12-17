@@ -15,7 +15,7 @@
         <div><button id="load_all">Load All Data</button></div>
     </div>
     <div id="vitalsChart"></div>
-    <div id="sleepChart"></div>
+    <div id="activityChart"></div>
     <div></div>
     <div id="container">
         <div class="init">
@@ -45,8 +45,8 @@
     <script>
         const vitalsChart = new VitalsChart("#vitalsChart");
         window.vitalsChart = vitalsChart;
-        const sleepChart = new SleepChart("#sleepChart");
-        window.sleepChart = sleepChart;
+        const activityChart = new ActivityChart("#activityChart");
+        window.activityChart = activityChart;
         const loadButton = document.querySelector("#load_all");
 
         const container = document.querySelector("#container");
@@ -92,7 +92,7 @@
             }
             data.sort((a, b) => (a.x > b.x) ? 1 : -1)
 
-            /// Sleep Chart
+            /// Activity Chart
             var data1 = activity.map((element) => { return { x: element.date, y: element.rawKind } })
             var data2 = activity.map((element) => { return { x: element.date, y: element.sleep } })
             var data3 = activity.map((element) => { return { x: element.date, y: element.deepSleep } })
@@ -126,9 +126,9 @@
                 vitalsChart.chart.zoomX(new Date(now-0 - timeFrame*60*60*1000).getTime(), now.getTime()); // Zoom
 
                 /// Sleep Chart
-                sleepChart.set(data1, data2, data3, data4, data5, data6, data7)
+                activityChart.set(data1, data2, data3, data4, data5, data6, data7)
                 firstSample = data1[0].x
-                sleepChart.chart.zoomX(new Date(now-0 - timeFrame*60*60*1000).getTime(), now.getTime()); // Zoom
+                activityChart.chart.zoomX(new Date(now-0 - timeFrame*60*60*1000).getTime(), now.getTime()); // Zoom
 
             }
         });
@@ -141,7 +141,7 @@
         connectButton.addEventListener("click", async () => {
             authKey = keyInput.value;
 
-            if(window.miband && window.miband.GATT.connected) {await window.miband.GATT.disconnect();}
+            if(window.miband && window.miband.GATT && window.miband.GATT.connected) {await window.miband.GATT.disconnect();}
 
             window.addEventListener("event_connected", (e) => {
                 container.classList.add("d-none");
@@ -183,9 +183,9 @@
                 vitalsChart.sethr(hr)
                 vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
 
-                /// Sleep Chart
-                sleepChart.set(data1, data2, data3, data4, data5, data6, data7)
-                sleepChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+                /// Activity Chart
+                activityChart.set(data1, data2, data3, data4, data5, data6, data7)
+                activityChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
                 
 
             } catch (e) {
