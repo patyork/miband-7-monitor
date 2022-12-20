@@ -19,6 +19,15 @@ export class VitalsChart {
                     enabled: false,
                 },
 
+                events:{
+                    // ToDo: Get more data if zoomed out
+                    zoomed: function(chartContext, { xaxis, yaxis }) {
+                        console.log(xaxis);
+                    },
+                    scrolled: function(chartContext, { xaxis }) {
+                        console.log(xaxis);
+                    },
+                },
 
                 toolbar: {
                     show: true,

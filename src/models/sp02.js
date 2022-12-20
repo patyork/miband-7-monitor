@@ -22,29 +22,34 @@ export class Sp02Data {
 
         var newData = [];
         for(let i=1; i<rawData.length-1;  i+=stride) // start at 1 to skip the version placeholder
-            {
-                //console.log("striding")
-                var measurement = rawData.slice(i, i+stride);
+        {
+            //console.log("striding")
+            var measurement = rawData.slice(i, i+stride);
 
-                var temp = this.parseMeasurement(measurement);
-                var date = temp[0];
-                var samples = temp[1];
-                var nonzero_samples = samples.filter(val => val != 0)
-                newData = newData.concat([
-                    {
-                        date : date,
-                        samples : samples,
-                        average : nonzero_samples.reduce((a, b) => a + b) / nonzero_samples.length, // average, excl. zeros
-                    }]
-                )
-            }
+            var temp = this.parseMeasurement(measurement);
+            var date = temp[0];
+            var samples = temp[1];
+            var nonzero_samples = samples.filter(val => val != 0)
+            newData = newData.concat([
+                {
+                    date : date,
+                    samples : samples,
+                    average : nonzero_samples.reduce((a, b) => a + b) / nonzero_samples.length, // average, excl. zeros
+                }]
+            )
+        }
+        
+        if(newData.length == 0) {
+            this.Since = [];
+            return;
+        }
         
         // Dedeuplicate, sort, and store
         this.Since = uniqBy(newData, JSON.stringify)
         this.Since.sort((a, b) => (a.date > b.date) ? 1 : -1)
 
         var temp = uniqBy(this.History, JSON.stringify)
-        this.History = [...this.temp]
+        this.History = [...temp]
         this.History.sort((a, b) => (a.date > b.date) ? 1 : -1)
         if(this.History.length > 0) this.NewestDate = this.History[this.History.length-1].date;
     }

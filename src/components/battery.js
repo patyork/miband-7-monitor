@@ -8,7 +8,7 @@ export class batteryReader extends EventTarget {
         this.Band = band;
 
         this.rawBatteryData = null;
-        this.BatteryData = null;
+        this.Data = null;
     }
 
     async Read() {
@@ -52,8 +52,8 @@ export class batteryReader extends EventTarget {
             var rawData = raw.slice(12);
 
             this.rawBatteryData = [...rawData];
-            this.BatteryData = new BatteryData(this.rawBatteryData);
-            console.log(this.BatteryData);
+            this.Data = new BatteryData(this.rawBatteryData);
+            console.log(this.Data);
         }
     }
 }
