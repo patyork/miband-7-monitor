@@ -135,3 +135,19 @@ export const NOTIFICATION_TYPES = {
 }
 
 export const ADVERTISEMENT_SERVICE = 0xFEE0;
+
+export const ACTIVITIES = {
+    INACTIVE : 96,
+    NOT_WORN : 115,
+    ASLEEP : 120,
+}
+
+export const ACTIVITIES_TEXT = {
+    64 : '?', //walking?
+    80 : 'Walking', //?
+    88 : '?',
+    96 : 'Inactive', //walking?
+    112 : '?', // Calibrating?
+    115 : 'Not Worn',
+    120 : 'Asleep'
+}

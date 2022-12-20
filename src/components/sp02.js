@@ -26,6 +26,8 @@ export class sp02Reader extends EventTarget {
         
     }
 
+    // Inclusive of datetime : if a record exists for datetime it will be returned
+    // Must pass a datetime > last record date to get only new data
     async readSince(datetime) {
         // Preprocess
         if(datetime == null)
@@ -45,7 +47,7 @@ export class sp02Reader extends EventTarget {
 
         // Send Start Command 1: Type and Data Type   failure: 10 01 32, timeout    ready: 10 01 01
         await this.Band.Chars.FETCH.writeValueWithoutResponse(
-            new Uint8Array([FETCH_COMMANDS.FROM_DATE, FETCH_DATA_TYPES.SP02_DATA,  ...datetime,   0x01])); // [start, type, ..date]
+            new Uint8Array([FETCH_COMMANDS.FROM_DATE, FETCH_DATA_TYPES.SP02_DATA,  ...datetime,   0x00])); // [start, type, ..date, 15minoffset]
         await new Promise( (resolve, reject) => {
             this.addEventListener('fetch_start', function(e) {
                 resolve(e.detail); // done
@@ -86,6 +88,9 @@ export class sp02Reader extends EventTarget {
         // Ready for Send command
         else */if(arraysEqual( raw.slice(0,3), new Uint8Array([0x10, 0x01, 0x01]))) // Ready
         {
+            // Clear buffer
+            this.rawSp02Data = new Uint8Array();
+
             console.warn("Fetch Ready");
             this.dispatchEvent( new CustomEvent('fetch_start', {detail: true}))
             return true;

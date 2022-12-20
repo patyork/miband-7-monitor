@@ -6,6 +6,7 @@ View Xiaomi Band 7 Data within your browser.
 
 
 Changelog:
+- Cleaner interface. Support for accessing onlt the last Fetch of data.
 - Simple web interface with most all of the data available @ [https://miband-7-monitor.pages.dev/](https://miband-7-monitor.pages.dev/)
 - Activity functions and data model. Fixed some date issues, may move to a JS date library.
 - Sp02 Data Model
