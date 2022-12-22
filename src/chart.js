@@ -343,5 +343,176 @@ export class ActivityChart {
     }
 }
 
+
+export class ActivityCategoryChart {
+    constructor(selector) {
+        this.category = [];
+        this.steps = [];
+        const options = {
+            chart: {
+                id:'category',
+                group: 'sync',
+                type: "line",
+                height: "47%",
+                animations: {
+                    enabled: false,
+                },
+                sparkline: {
+                    enabled: false,
+                },
+
+
+                toolbar: {
+                    show: true,
+                    offsetX: 0,
+                    offsetY: 0,
+                    tools: {
+                        download: true,
+                        selection: true,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                        reset: true | '<img src="/static/icons/reset.png" width="20">',
+                        customIcons: []
+                    },
+                }
+
+            },
+            dataLabels: {
+                enabled: false
+            },
+            legend : {
+                labels: {
+                    useSeriesColors : true,
+                },
+            },
+            colors: ["#ffffff", "#e2c649"],
+            markers: {
+                size: 0,
+            },
+            stroke: {
+                curve: "smooth",
+                width : 2,
+            },
+            tooltip: {
+                enabled: true,
+                x : {
+                    format : "M/d h:mmtt",
+                },
+                y: {
+                    formatter: function(val, { series, seriesIndex, dataPointIndex, w }) {
+                        if(seriesIndex == 1) return val;
+                        
+                        if(val == 0) return 'Deep Sleep';
+                        if(val == 1) return 'Light Sleep';
+                        if(val == 2) return 'REM Sleep';
+                        if(val == 3) return 'Inactive';
+                        if(val == 4) return 'Active';
+                        return val
+                    }
+                  },
+                shared : true,
+            },
+            xaxis: {
+                type: "datetime",
+                labels: {
+                    format : "M/d h:mmtt",
+                    datetimeUTC: false,
+                    style : {
+                        colors: "#ffffff",
+                    },
+                },
+            },
+            grid: {
+                show: false,
+            },
+            yaxis: [
+                {
+                    show: false,
+                    labels: {
+                        
+                        minWidth: 40,
+                    },
+                    min: -0.5,
+                    max: 4.5,
+                },
+                {
+                    opposite: true,
+                    show: false,
+                },
+            ],
+            series: [
+                {
+                    name : "Category",
+                    type : 'line',
+                    data: this.category.slice(),
+                },
+                {
+                    name : "Steps",
+                    type : 'bar',
+                    data: this.steps.slice(),
+                },
+            ],
+
+            annotations: {
+                yaxis: [
+                  {
+                    y: -0.5,
+                    y2: 0.5,
+                    borderColor: '#ae00ff',
+                    fillColor: '#ae00ff',
+                  },
+                  {
+                    y: 0.5,
+                    y2: 1.5,
+                    borderColor: '#2600ff',
+                    fillColor: '#2600ff',
+                  },
+                  {
+                    y: 1.5,
+                    y2: 2.5,
+                    borderColor: '#00b7ff',
+                    fillColor: '#00b7ff',
+                  },
+                  {
+                    y: 2.5,
+                    y2: 3.5,
+                    borderColor: '#ff5e00',
+                    fillColor: '#ff5e00',
+                  },
+                  
+                  {
+                    y: 3.5,
+                    y2: 4.5,
+                    borderColor: '#51ff00',
+                    fillColor: '#51ff00',
+                  },
+                  
+                ]
+              },
+
+        };
+        /** @type ApexCharts */
+        this.chart = new ApexCharts(document.querySelector(selector), options);
+        this.chart.render();
+    }
+
+    
+    set(data1, data2) {
+        this.kind = data1.slice()
+        this.steps = data2.slice()
+        this.chart.updateSeries([
+            {
+                data: this.kind,
+            },
+            {
+                data: this.steps,
+            },
+        ]);
+    }
+}
+
 window.VitalsChart = VitalsChart;
 window.ActivityChart = ActivityChart;
+window.ActivityCategoryChart = ActivityCategoryChart;
