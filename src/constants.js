@@ -137,17 +137,31 @@ export const NOTIFICATION_TYPES = {
 export const ADVERTISEMENT_SERVICE = 0xFEE0;
 
 export const ACTIVITIES = {
-    INACTIVE : 96,
+    INACTIVE : 80,
+
+    CALIBRATING : 112,
     NOT_WORN : 115,
-    ASLEEP : 120,
+    CHARGING : 118,
+
+    SLEEP : 120,
+}
+
+export const ACTIVITY_CATEGORY = {
+    DEEP_SLEEP : 0,
+    LIGHT_SLEEP : 1,
+    REM_SLEEP : 2,
+    INACTIVE : 3,
+    ACTIVE : 4,
+    OFF : null,
 }
 
 export const ACTIVITIES_TEXT = {
     64 : '?', //walking?
-    80 : 'Walking', //?
+    INACTIVE : 'Inactive', //?
     88 : '?',
-    96 : 'Inactive', //walking?
-    112 : '?', // Calibrating?
-    115 : 'Not Worn',
-    120 : 'Asleep'
+    96 : 'Walking', //walking?
+    CALIBRATING : 'Calibrating', // Calibrating? Happens when band first put on
+    NOT_WORN : 'Not Worn',
+    CHARGING : 'Charging',
+    ASLEEP : 'Asleep'
 }

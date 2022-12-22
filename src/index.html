@@ -30,6 +30,7 @@
     </div>
     <div id="vitalsChart"></div>
     <div id="activityChart"></div>
+    <div id="activityCategoryChart"></div>
     <div></div>
     <div id="container">
         <div class="init">
@@ -59,6 +60,8 @@
     <script>
         const vitalsChart = new VitalsChart("#vitalsChart");
         window.vitalsChart = vitalsChart;
+        const activityCategoryChart = new ActivityCategoryChart("#activityCategoryChart");
+        window.activityCategoryChart = activityCategoryChart;
         const activityChart = new ActivityChart("#activityChart");
         window.activityChart = activityChart;
         const loadButton = document.querySelector("#load_all");
@@ -103,6 +106,9 @@
                     if (activity[activity.length - 1].rawKind == 115) {
                         notworndisplay.innerHTML = "Band not being worn!";
                     }
+                    else if (activity[activity.length - 1].rawKind == 118) {
+                        notworndisplay.innerHTML = "Band is charging.";
+                    }
                     else { notworndisplay.innerHTML = ""; }
 
                     var hr = activity[activity.length - 1].heartRate
@@ -131,6 +137,7 @@
             if(window.miband && window.miband.GATT && !window.miband.GATT.connected)
             {
                 clearInterval(spo2Timer);
+                notworndisplay.innerHTML = "Band not connected.";
                 return
             }
 
@@ -177,6 +184,7 @@
             if(window.miband && window.miband.GATT && !window.miband.GATT.connected)
             {
                 clearInterval(activityTimer);
+                notworndisplay.innerHTML = "Band not connected.";
                 return
             }
 
@@ -207,14 +215,18 @@
                 var data3 = activity.map((element) => { return { x: element.date, y: element.deepSleep } })
                 var data4 = activity.map((element) => { return { x: element.date, y: element.remSleep } })
                 var data5 = activity.map((element) => { return { x: element.date, y: element.rawIntensity } })
-                var data6 = activity.map((element) => { return { x: element.date, y: element.steps } })
+                var data6 = activity.map((element) => { return { x: element.date, y: element.rawSteps } })
                 var data7 = activity.map((element) => { return { x: element.date, y: element.unknown1 } })
+                var data8 = activity.map((element) => { return { x: element.date, y: element.category } })
+                var data9 = activity.map((element) => { return { x: element.date, y: element.steps } })
 
                 //// Activity
                 vitalsChart.sethr(data)
 
                 /// Activity Chart
                 activityChart.set(data1, data2, data3, data4, data5, data6, data7)
+                /// Activity Category Chart
+                activityCategoryChart.set(data8, data9)
 
                 updateDisplay();
             }
@@ -239,10 +251,12 @@
             var data3 = activity.map((element) => { return { x: element.date, y: element.deepSleep } })
             var data4 = activity.map((element) => { return { x: element.date, y: element.remSleep } })
             var data5 = activity.map((element) => { return { x: element.date, y: element.rawIntensity } })
-            var data6 = activity.map((element) => { return { x: element.date, y: element.steps } })
+            var data6 = activity.map((element) => { return { x: element.date, y: element.rawSteps } })
             var data7 = activity.map((element) => { return { x: element.date, y: element.unknown1 } })
+            var data8 = activity.map((element) => { return { x: element.date, y: element.category } })
+            var data9 = activity.map((element) => { return { x: element.date, y: element.steps } })
             
-            return [data, data1, data2, data3, data4, data5, data6, data7]
+            return [data, data1, data2, data3, data4, data5, data6, data7, data8, data9]
         }
 
         
@@ -261,7 +275,7 @@
                 //// Activity
                 var temp = await loadActivityData(since);
                 var hr = temp[0];
-                var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7];
+                var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7]; var data8 = temp[8]; var data9 = temp[9];
 
                 vitalsChart.sethr(hr)
                 firstSample = hr[0].x
@@ -269,6 +283,7 @@
 
                 /// Sleep Chart
                 activityChart.set(data1, data2, data3, data4, data5, data6, data7)
+                activityCategoryChart.set(data8, data9)
                 firstSample = data1[0].x
                 activityChart.chart.zoomX(new Date(now-0 - timeFrame*60*60*1000).getTime(), now.getTime()); // Zoom
 
@@ -321,7 +336,7 @@
                 //// Activity
                 var temp = await loadActivityData(since);
                 var hr = temp[0];
-                var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7];
+                var data1 = temp[1]; var data2 = temp[2]; var data3 = temp[3]; var data4 = temp[4]; var data5 = temp[5]; var data6 = temp[6]; var data7 = temp[7]; var data8 = temp[8]; var data9 = temp[9];
 
                 vitalsChart.sethr(hr)
                 vitalsChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
@@ -329,6 +344,8 @@
                 /// Activity Chart
                 activityChart.set(data1, data2, data3, data4, data5, data6, data7)
                 activityChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
+                activityCategoryChart.set(data8, data9)
+                activityCategoryChart.chart.zoomX(since.getTime(), now.getTime()); // Zoom
                 
 
                 //// Interval for new Data

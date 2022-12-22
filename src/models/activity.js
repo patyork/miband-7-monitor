@@ -1,4 +1,5 @@
 import { dateAdd, uniqBy } from "../tools";
+import { ACTIVITY_CATEGORY, ACTIVITIES } from "../constants";
 
 export class ActivityData {
     // Construct with Parsed Data
@@ -33,30 +34,90 @@ export class ActivityData {
         }
 
         // Dedeuplicate and sort
+        this.Since = this.postProcess(this.Since);
         this.Since = uniqBy(this.Since, JSON.stringify)
         this.Since.sort((a, b) => (a.date > b.date) ? 1 : -1)
 
-        var temp = uniqBy(this.History, JSON.stringify)
-        this.History = [...temp]
+        
+        this.History = this.postProcess(this.History);
+        this.History = uniqBy(this.History, JSON.stringify)
         this.History.sort((a, b) => (a.date > b.date) ? 1 : -1)
         if(this.History.length > 0) this.NewestDate = this.History[this.History.length-1].date;
     }
 
+    postProcess(data) {
+        // Moving Average
+
+        return [...data] // copy and return
+    }
+
     parseMeasurement(date, measurement) {
+        var rawKind = measurement[0];
+        var rawIntensity = measurement[1];
+        var rawSteps = measurement[2];
         var hr = measurement[3] == 255 ? null : measurement[3];
-        
+        var unknown1 = measurement[4];
+        var sleep = measurement[5];
+        var deepSleep = measurement[6];
+        var remSleep = measurement[7];
+
+        var category = ACTIVITY_CATEGORY.OFF;
+        var steps = null;
+
+        // Post Process
+        //temp.deepSleep = temp.deepSleep - 128;  // UINT8 128, should probably be an INT 0
+        //temp.remSleep = temp.remSleep - 128;  // UINT8 127 or 128??, should probably be an INT 0.
+        //if(temp.remSleep == -128) temp.remSleep = 0; // Seems to be offset??
+        if(rawKind == ACTIVITIES.NOT_WORN ||
+            rawKind == ACTIVITIES.CHARGING)
+        {
+            category = ACTIVITY_CATEGORY.OFF
+        }
+        else if(rawKind == ACTIVITIES.SLEEP)
+        {
+            steps = null; // No sleepwalking!
+            category = ACTIVITY_CATEGORY.LIGHT_SLEEP; // Assume Light Sleep
+
+            if(remSleep > deepSleep)
+            {
+                category = ACTIVITY_CATEGORY.REM_SLEEP;
+            }
+            else if(remSleep == deepSleep)
+            {
+                category = ACTIVITY_CATEGORY.DEEP_SLEEP;
+            }
+        }
+        else if(rawKind == ACTIVITIES.INACTIVE ||
+            rawKind == ACTIVITIES.CALIBRATING)
+        {
+            category = ACTIVITY_CATEGORY.INACTIVE;
+            steps = rawSteps;
+        }
+        else
+        {
+            category = ACTIVITY_CATEGORY.ACTIVE;
+            steps = rawSteps;
+        }
+
         var temp = [
             {
                 date : date,
-                rawKind : measurement[0],
-                rawIntensity : measurement[1],
-                steps : measurement[2],
+                rawKind : rawKind,
+                rawIntensity : rawIntensity,
+                rawSteps : rawSteps,
                 heartRate : hr,
-                unknown1 : measurement[4],
-                sleep : measurement[5],
-                deepSleep : measurement[6] - 128,  // UINT8 128, should probably be an INT 0
-                remSleep : measurement[7],
+                unknown1 : unknown1,
+                sleep : sleep,
+                deepSleep : deepSleep,
+                remSleep : remSleep,
+
+                category : category,
+                categoryRaw : category,
+                steps : steps,
             }];
+        console.log(temp)
+
+
         this.History = this.History.concat(temp)
         this.Since = this.Since.concat(temp)
         

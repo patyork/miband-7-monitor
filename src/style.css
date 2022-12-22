@@ -1,10 +1,13 @@
 #test {
-    color: #a84dc4
+    color: #51ff00c7
 }
 
-#vitalsChart, #activityChart {
+#vitalsChart, #activityChart, #activityCategoryChart {
     width: 95%;
+    opacity: 1;
 }
+
+/*#activityChart { visibility: hidden;display: none;}*/
 
 
 #topbar {
